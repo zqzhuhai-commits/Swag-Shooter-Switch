@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "status": "diagnostic_button_mapper_connected_not_injected_into_game",
+  "buttons": {
+    "A": "jump",
+    "B": "crouch",
+    "Y": "prone",
+    "X": "reload",
+    "Plus": "map",
+    "Left": "primary_smg",
+    "Right": "pistol",
+    "Up": "knife",
+    "Down": "cycle_item",
+    "L": "grenade_on_release",
+    "ZL": "aim",
+    "ZR": "fire"
+  },
+  "cursor": {
+    "toggle_chord": [
+      "L",
+      "R",
+      "Down"
+    ],
+    "confirm": "A",
+    "cancel": "B",
+    "move": "right_stick",
+    "suppress_during_chord": [
+      "grenade",
+      "cycle_item"
+    ],
+    "suppress_in_cursor": [
+      "jump",
+      "fire",
+      "grenade",
+      "cycle_item"
+    ]
+  },
+  "sticks": {
+    "left": "move",
+    "right": "look",
+    "deadzone": 0.16
+  },
+  "chord_policy": "hold L+R then press Down; cancel grenade until L released; defer standalone Down until release",
+  "sticks_status": "planned_not_connected_to_mapper"
+}

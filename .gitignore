@@ -1,0 +1,7 @@
+build/
+romfs/game/
+romfs/tests/*.so
+*.nro
+*.elf
+*.nacp
+__pycache__/
