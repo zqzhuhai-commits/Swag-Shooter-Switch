@@ -16,6 +16,7 @@
 #include <wchar.h>
 #include <pthread.h>
 #include <poll.h>
+#include <setjmp.h>
 extern char **environ;
 static FILE *system_log;
 /* The guest system profile advertises UTC. Keep libc's calendar conversion
@@ -522,9 +523,30 @@ static int sigaction_selftest(FILE *log) {
     errors+=probe.before!=0x12345678 || probe.after!=0x87654321;
     fprintf(log,"SIGACTION_PROFILE_DONE errors=%d query_default=CHECKED unsupported_install=REJECTED\n",errors); return errors;
 }
+/* Both jump endpoints use the SDK representation, which fits inside the
+ * opaque 256-byte Android arm64 buffer. This profile cannot install async
+ * signal handlers or change signal masks; no signal-mask backend is implied.
+ * Bind the actual function, never a C wrapper that would save a dead frame. */
+_Static_assert(sizeof(jmp_buf)<=256,"native context fits Android jump buffer");
+extern int probe_native_setjmp(void *) __asm__("setjmp") __attribute__((returns_twice));
+static int jump_context_selftest(FILE *log) {
+    struct { uint64_t before; _Alignas(16) unsigned char context[256]; uint64_t after; } guarded={0};
+    guarded.before=0x12345678; guarded.after=0x87654321;
+    volatile int visited=0;
+    int value=probe_native_setjmp(guarded.context);
+    if(!value) { visited=1; longjmp((void *)guarded.context,37); }
+    volatile int errors=value!=37 || visited!=1;
+    errors+=guarded.before!=0x12345678 || guarded.after!=0x87654321;
+    int zero=probe_native_setjmp(guarded.context);
+    if(!zero) longjmp((void *)guarded.context,0);
+    errors+=zero!=1;
+    fprintf(log,"JUMP_CONTEXT_DONE errors=%d native_bytes=%zu guest_capacity=256 return_37_and_zero=CHECKED async_signal_masks=UNAVAILABLE\n",errors,sizeof(jmp_buf));
+    return errors;
+}
 typedef struct { const char *name; uintptr_t address; } SystemBinding;
 #define SYS_BIND(name, fn) {name, (uintptr_t)(fn)}
 static const SystemBinding bindings[] = {
+    SYS_BIND("setjmp", setjmp), SYS_BIND("longjmp", longjmp),
     SYS_BIND("sigaction", guest_sigaction),
     SYS_BIND("poll", guest_poll),
     SYS_BIND("accept", guest_accept), SYS_BIND("sendto", guest_sendto), SYS_BIND("recvfrom", guest_recvfrom),
@@ -558,7 +580,7 @@ uintptr_t guest_system_resolve(const char *name) {
     return 0;
 }
 int guest_system_selftest(FILE *log) {
-    int errors = profile_selftest(log) + network_text_selftest(log) + signal_set_selftest(log) + user_profile_selftest(log) + syslog_selftest(log) + sockaddr_selftest(log) + poll_selftest(log) + sigaction_selftest(log); char value[92], name[32];
+    int errors = profile_selftest(log) + network_text_selftest(log) + signal_set_selftest(log) + user_profile_selftest(log) + syslog_selftest(log) + sockaddr_selftest(log) + poll_selftest(log) + sigaction_selftest(log) + jump_context_selftest(log); char value[92], name[32];
     errors += property_get("ro.build.version.sdk", value) != 2 || strcmp(value, "30");
     const Property *p = property_find("ro.product.model");
     errors += !p || property_read(p, name, value) <= 0 || strcmp(name, "ro.product.model");
