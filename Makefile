@@ -1,6 +1,6 @@
-APP_TITLE := SWAG Switch Resource bring-up v0.12.2
+APP_TITLE := SWAG Switch Resource bring-up v0.12.3
 APP_AUTHOR := Local port project
-APP_VERSION := 0.12.2
+APP_VERSION := 0.12.3
 #---------------------------------------------------------------------------------
 .SUFFIXES:
 #---------------------------------------------------------------------------------

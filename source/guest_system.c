@@ -498,9 +498,34 @@ static int poll_selftest(FILE *log) {
     errors+=guest_poll(&bad,1,0)!=-1 || *bionic_errno_ptr()!=95;
     fprintf(log,"POLL_TEST_DONE errors=%d timeout_and_rejection=CHECKED socket_readiness=NOT_TESTED\n",errors); return errors;
 }
+typedef struct { int32_t flags,pad; uintptr_t handler; uint64_t mask; uintptr_t restorer; } GuestSignalAction;
+_Static_assert(sizeof(GuestSignalAction)==32 && offsetof(GuestSignalAction,handler)==8,"Bionic LP64 sigaction");
+static int guest_sigaction(int signal,const GuestSignalAction *action,GuestSignalAction *old) {
+    if(signal<1 || signal>64 || (action && (signal==9 || signal==19))) { *bionic_errno_ptr()=22; return -1; }
+    /* There is no POSIX asynchronous signal-delivery backend on Switch.
+     * Report the default disposition, but reject installing callbacks rather
+     * than pretending that crash handlers can be delivered. */
+    if(action && (action->handler || action->flags || action->mask || action->restorer)) {
+        fprintf(system_log ? system_log : stderr,"SIGNAL_ACTION_UNSUPPORTED signal=%d flags=%x handler=%p delivery=UNAVAILABLE\n",signal,(unsigned)action->flags,(void *)action->handler);
+        *bionic_errno_ptr()=95; return -1;
+    }
+    if(old) memset(old,0,sizeof *old);
+    fprintf(system_log ? system_log : stderr,"SIGNAL_ACTION_DEFAULT signal=%d query=%d delivery=UNAVAILABLE\n",signal,action==NULL);
+    return 0;
+}
+static int sigaction_selftest(FILE *log) {
+    struct { uint64_t before; GuestSignalAction action; uint64_t after; } probe={0x12345678,{0},0x87654321};
+    int errors=guest_sigaction(11,NULL,&probe.action)!=0 || probe.action.handler!=0;
+    GuestSignalAction request={.handler=1};
+    errors+=guest_sigaction(11,&request,NULL)!=-1 || *bionic_errno_ptr()!=95;
+    errors+=guest_sigaction(9,&request,NULL)!=-1 || *bionic_errno_ptr()!=22;
+    errors+=probe.before!=0x12345678 || probe.after!=0x87654321;
+    fprintf(log,"SIGACTION_PROFILE_DONE errors=%d query_default=CHECKED unsupported_install=REJECTED\n",errors); return errors;
+}
 typedef struct { const char *name; uintptr_t address; } SystemBinding;
 #define SYS_BIND(name, fn) {name, (uintptr_t)(fn)}
 static const SystemBinding bindings[] = {
+    SYS_BIND("sigaction", guest_sigaction),
     SYS_BIND("poll", guest_poll),
     SYS_BIND("accept", guest_accept), SYS_BIND("sendto", guest_sendto), SYS_BIND("recvfrom", guest_recvfrom),
     SYS_BIND("bind", guest_bind), SYS_BIND("connect", guest_connect), SYS_BIND("getsockname", guest_getsockname), SYS_BIND("getpeername", guest_getpeername),
@@ -533,7 +558,7 @@ uintptr_t guest_system_resolve(const char *name) {
     return 0;
 }
 int guest_system_selftest(FILE *log) {
-    int errors = profile_selftest(log) + network_text_selftest(log) + signal_set_selftest(log) + user_profile_selftest(log) + syslog_selftest(log) + sockaddr_selftest(log) + poll_selftest(log); char value[92], name[32];
+    int errors = profile_selftest(log) + network_text_selftest(log) + signal_set_selftest(log) + user_profile_selftest(log) + syslog_selftest(log) + sockaddr_selftest(log) + poll_selftest(log) + sigaction_selftest(log); char value[92], name[32];
     errors += property_get("ro.build.version.sdk", value) != 2 || strcmp(value, "30");
     const Property *p = property_find("ro.product.model");
     errors += !p || property_read(p, name, value) <= 0 || strcmp(name, "ro.product.model");
