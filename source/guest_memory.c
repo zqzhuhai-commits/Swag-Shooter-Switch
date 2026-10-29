@@ -3,6 +3,7 @@
 #include "runtime_services.h"
 #include "bionic_threads.h"
 #include <switch.h>
+#include <switch/kernel/virtmem.h>
 #include <malloc.h>
 #include <stdlib.h>
 #include <string.h>
@@ -17,6 +18,8 @@ typedef struct Mapping {
     unsigned char *base, *permissions;
     size_t size, active;
     int anonymous;
+    int lazy;
+    VirtmemReservation *reservation;
     struct Mapping *next;
 } Mapping;
 static Mapping *maps;
@@ -40,6 +43,28 @@ static void *b_mmap(void *hint, size_t length, int prot, int flags, int fd, int6
     size_t rounded = (length + 4095) & ~(size_t)4095;
     Mapping *m = calloc(1, sizeof *m);
     if (!m) { fail(ENOMEM); return (void *)UINTPTR_MAX; }
+    /* A PROT_NONE anonymous mmap is address-space reservation, not a
+     * request to allocate and zero hundreds of MiB of Switch heap. */
+    if ((flags & 0x20) && prot == 0) {
+        virtmemLock();
+        void *base = virtmemFindAslr(rounded, 4096);
+        VirtmemReservation *rv = base ? virtmemAddReservation(base, rounded) : NULL;
+        virtmemUnlock();
+        if (!rv) goto oom;
+        m->base = base;
+        m->reservation = rv;
+        m->lazy = 1;
+        m->permissions = malloc(rounded / 4096);
+        if (!m->permissions) {
+            virtmemLock(); virtmemRemoveReservation(rv); virtmemUnlock();
+            m->reservation = NULL;
+            goto oom;
+        }
+        memset(m->permissions, 8, rounded / 4096);
+        m->size = rounded; m->active = rounded / 4096; m->anonymous = 1;
+        mutexLock(&map_lock); m->next = maps; maps = m; mutexUnlock(&map_lock);
+        return m->base;
+    }
     m->base = memalign(4096, rounded + 4096);
     m->permissions = malloc(rounded / 4096);
     if (!m->base || !m->permissions) goto oom;
@@ -79,6 +104,32 @@ static int b_mprotect(void *address, size_t length, int prot) {
     size_t first = ((char *)address - (char *)m->base) / 4096;
     for (size_t p = first; p < first + size / 4096; ++p)
         if (!(m->permissions[p] & 8)) { mutexUnlock(&map_lock); return fail(ENOMEM); }
+    if (m->lazy) {
+        /* The reservation has no physical backing until a non-NONE protect.
+         * Commit only the newly accessible spans. Bit 0x10 tracks backing. */
+        if (prot != 0) {
+            for (size_t p = first; p < first + size / 4096;) {
+                if (m->permissions[p] & 0x10) { ++p; continue; }
+                size_t end = p + 1;
+                while (end < first + size / 4096 && !(m->permissions[end] & 0x10)) ++end;
+                Result mapped = svcMapPhysicalMemory(m->base + p * 4096, (end - p) * 4096);
+                if (R_FAILED(mapped)) { mutexUnlock(&map_lock); return fail(ENOMEM); }
+                for (size_t j = p; j < end; ++j) m->permissions[j] |= 0x10;
+                p = end;
+            }
+        }
+        for (size_t p = first; p < first + size / 4096;) {
+            if (!(m->permissions[p] & 0x10)) { ++p; continue; }
+            size_t end = p + 1;
+            while (end < first + size / 4096 && (m->permissions[end] & 0x10)) ++end;
+            Result rc = svcSetMemoryPermission(m->base + p * 4096, (end - p) * 4096, prot);
+            if (R_FAILED(rc)) { mutexUnlock(&map_lock); return fail(ENOTSUP); }
+            p = end;
+        }
+        for (size_t p = first; p < first + size / 4096; ++p)
+            m->permissions[p] = (m->permissions[p] & 0x10) | 8 | prot;
+        mutexUnlock(&map_lock); return 0;
+    }
     Result rc = svcSetMemoryPermission(address, size, prot);
     if (R_SUCCEEDED(rc)) memset(m->permissions + first, prot | 8, size / 4096);
     mutexUnlock(&map_lock);
@@ -91,18 +142,37 @@ static int b_munmap(void *address, size_t length) {
     Mapping *m = find(address, size);
     if (!m) { mutexUnlock(&map_lock); return fail(EINVAL); }
     size_t first = ((char *)address - (char *)m->base) / 4096;
-    Result rc = svcSetMemoryPermission(address, size, Perm_None);
-    if (R_FAILED(rc)) { mutexUnlock(&map_lock); return fail(ENOTSUP); }
+    Result rc = 0;
+    if (m->lazy) {
+        /* Unmap physical backing for just the released spans; keep the
+         * virtual reservation until every page has been released. */
+        for (size_t p = first; p < first + size / 4096;) {
+            if (!(m->permissions[p] & 0x10)) { ++p; continue; }
+            size_t end = p + 1;
+            while (end < first + size / 4096 && (m->permissions[end] & 0x10)) ++end;
+            rc = svcUnmapPhysicalMemory(m->base + p * 4096, (end - p) * 4096);
+            if (R_FAILED(rc)) { mutexUnlock(&map_lock); return fail(ENOTSUP); }
+            p = end;
+        }
+    } else {
+        rc = svcSetMemoryPermission(address, size, Perm_None);
+        if (R_FAILED(rc)) { mutexUnlock(&map_lock); return fail(ENOTSUP); }
+    }
     for (size_t p = first; p < first + size / 4096; ++p) {
         if (m->permissions[p] & 8) --m->active;
         m->permissions[p] = 0;
     }
     if (!m->active) {
-        rc = svcSetMemoryPermission(m->base, m->size, Perm_Rw);
-        if (R_FAILED(rc)) { mutexUnlock(&map_lock); return fail(ENOTSUP); }
+        if (!m->lazy) {
+            rc = svcSetMemoryPermission(m->base, m->size, Perm_Rw);
+            if (R_FAILED(rc)) { mutexUnlock(&map_lock); return fail(ENOTSUP); }
+        }
         Mapping **link = &maps; while (*link != m) link = &(*link)->next;
         *link = m->next;
-        free(m->base); free(m->permissions); free(m);
+        if (m->lazy) {
+            virtmemLock(); virtmemRemoveReservation(m->reservation); virtmemUnlock();
+        } else free(m->base);
+        free(m->permissions); free(m);
     }
     mutexUnlock(&map_lock); return 0;
 }
@@ -119,6 +189,7 @@ static int b_madvise(void *address, size_t length, int advice) {
     if (advice == 4 || advice == 8) {
         if (!m->anonymous) { mutexUnlock(&map_lock); return fail(ENOTSUP); }
         for (size_t p = first; p < first + size / 4096; ++p) {
+            if (m->lazy && !(m->permissions[p] & 0x10)) continue;
             unsigned char *page = m->base + p * 4096;
             if (R_FAILED(svcSetMemoryPermission(page, 4096, Perm_Rw))) { mutexUnlock(&map_lock); return fail(ENOTSUP); }
             memset(page, 0, 4096);
@@ -162,6 +233,21 @@ int guest_memory_selftest(FILE *log) {
         else { errors += memcmp(p, ELFMAG, 4) != 0; errors += b_munmap(p, 4096) != 0; }
         errors += close_file(fd) != 0;
     }
+    /* Regression: multiple Unity-sized PROT_NONE reservations must not
+     * allocate multiple 512 MiB backing buffers merely to reserve VA. */
+    unsigned char *reserved[6] = {0};
+    for (size_t i = 0; i < 6; ++i) {
+        reserved[i] = b_mmap(NULL, 536866816, 0, 2 | 0x20, -1, 0);
+        if (reserved[i] == (void *)UINTPTR_MAX) { ++errors; reserved[i] = NULL; break; }
+    }
+    if (reserved[0]) {
+        errors += b_mprotect(reserved[0] + 4096, 4096, 3) != 0;
+        if (!errors) { reserved[0][4096] = 0x5a; errors += reserved[0][4096] != 0x5a; }
+        errors += b_mprotect(reserved[0] + 4096, 4096, 0) != 0;
+    }
+    for (size_t i = 0; i < 6; ++i) if (reserved[i])
+        errors += b_munmap(reserved[i], 536866816) != 0;
+    fprintf(log, "MEMORY_LAZY_RESERVE errors=%d reservations=6 bytes_each=536866816\\n", errors);
     errors += b_mmap(NULL, 0, 3, 2 | 0x20, -1, 0) != (void *)UINTPTR_MAX;
     fprintf(log, "MEMORY_ABI_DONE errors=%d protection=CHECKED partial_unmap=CHECKED filemap=CHECKED\n", errors);
     return errors ? -1 : 0;
