@@ -1,6 +1,6 @@
-APP_TITLE := SWAG Switch Resource bring-up v0.14.23
-APP_AUTHOR := Local port project
-APP_VERSION := 0.14.23
+APP_TITLE := 绝地精英
+APP_AUTHOR := Xiao Fan
+APP_VERSION := 0.14.34
 #---------------------------------------------------------------------------------
 .SUFFIXES:
 #---------------------------------------------------------------------------------

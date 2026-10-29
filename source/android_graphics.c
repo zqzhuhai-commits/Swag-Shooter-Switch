@@ -1,3 +1,4 @@
+#include "diagnostics.h"
 #include "android_graphics.h"
 #include <switch.h>
 #include <EGL/egl.h>
@@ -39,14 +40,14 @@ static EGLBoolean guest_destroy_surface(EGLDisplay display,EGLSurface surface) {
 static EGLBoolean trace_swap(EGLDisplay display,EGLSurface surface) {
     static unsigned calls;
     unsigned call=__atomic_add_fetch(&calls,1,__ATOMIC_RELAXED);
-    if(egl_log && (call<=3 || call%60==0)) { fprintf(egl_log,"ENGINE_PRESENT_BEGIN count=%u\n",call); fflush(egl_log); }
+    if(diagnostics_enabled() && egl_log && call<=3) { fprintf(egl_log,"ENGINE_PRESENT_BEGIN count=%u\n",call); fflush(egl_log); }
     EGLBoolean result=eglSwapBuffers(display,surface);
     if(egl_log && call<=3) {
         EGLint width=0,height=0;
         EGLBoolean w=guest_query_surface(display,surface,EGL_WIDTH,&width),h=guest_query_surface(display,surface,EGL_HEIGHT,&height);
         fprintf(egl_log,"ENGINE_PRESENT_SIZE width=%d height=%d query_ok=%d\n",width,height,w && h);
     }
-    if(egl_log && (!result || call<=3 || call%60==0)) { fprintf(egl_log,"ENGINE_PRESENT_END count=%u result=%u visual_confirmation=REQUIRED\n",call,result); fflush(egl_log); }
+    if(diagnostics_enabled() && egl_log && (!result || call<=3)) { fprintf(egl_log,"ENGINE_PRESENT_END count=%u result=%u visual_confirmation=REQUIRED\n",call,result); fflush(egl_log); }
     return result;
 }
 void android_graphics_set_log(FILE *log) { egl_log=log; }

@@ -1,0 +1,8 @@
+{
+  "version": "0.14.34",
+  "nro_sha256": "9214e958337b26a4f55dc856f5d3ecb4cc7632f14bc82343cd4f0cac51cca678",
+  "romfs_files_verified": 1863,
+  "format": "NRO and native NSP",
+  "device_install_launch": "pending",
+  "driver_layout": "left vertical throttle/reverse; right horizontal steer"
+}

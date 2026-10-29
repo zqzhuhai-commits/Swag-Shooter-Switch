@@ -1,3 +1,4 @@
+#include "native_process.h"
 #define _GNU_SOURCE
 #include "guest_memory.h"
 #include "runtime_services.h"
@@ -72,7 +73,7 @@ static void *mmap_impl(void *hint, size_t length, int prot, int flags, int fd, i
      * backing for a virtual reservation. Reuse the proven own-process code
      * mapping syscalls as RW data aliases; never grant execute permission. */
     if((flags&0x20) && !prot) {
-        if(!envGetOwnProcessHandle() || !envIsSyscallHinted(0x73) || !envIsSyscallHinted(0x77) || !envIsSyscallHinted(0x78)) { free(m); fail(ENOTSUP); return (void *)UINTPTR_MAX; }
+        if(!runtime_process_handle() || !envIsSyscallHinted(0x73) || !envIsSyscallHinted(0x77) || !envIsSyscallHinted(0x78)) { free(m); fail(ENOTSUP); return (void *)UINTPTR_MAX; }
         m->permissions=malloc(rounded/4096);
         if(!m->permissions) { free(m); fail(ENOMEM); return (void *)UINTPTR_MAX; }
         virtmemLock();
@@ -146,11 +147,11 @@ static Result commit_lazy_pages(Mapping *m,size_t first,size_t pages) {
             void *destination=m->base+p*4096;
             void *source=existing->source+(p-existing->first)*4096;
             virtmemLock();
-            Result rc=svcMapProcessCodeMemory(envGetOwnProcessHandle(),(u64)destination,(u64)source,bytes);
+            Result rc=svcMapProcessCodeMemory(runtime_process_handle(),(u64)destination,(u64)source,bytes);
             virtmemUnlock();
             if(R_FAILED(rc)) return rc;
             for(size_t i=p;i<end;++i) m->permissions[i]|=16;
-            rc=svcSetProcessMemoryPermission(envGetOwnProcessHandle(),(u64)destination,bytes,Perm_Rw);
+            rc=svcSetProcessMemoryPermission(runtime_process_handle(),(u64)destination,bytes,Perm_Rw);
             if(R_FAILED(rc)) return rc;
             for(size_t i=p;i<end;++i) m->permissions[i]=(m->permissions[i]&~3)|3;
             p=end; continue;
@@ -165,12 +166,12 @@ static Result commit_lazy_pages(Mapping *m,size_t first,size_t pages) {
         memset(b->source,0,bytes);
         void *destination=m->base+p*4096;
         virtmemLock();
-        Result rc=svcMapProcessCodeMemory(envGetOwnProcessHandle(),(u64)destination,(u64)b->source,bytes);
+        Result rc=svcMapProcessCodeMemory(runtime_process_handle(),(u64)destination,(u64)b->source,bytes);
         virtmemUnlock();
         if(R_FAILED(rc)) { if(memory_log) fprintf(memory_log,"MMAP_LAZY_MAP_FAIL address=%p bytes=%zu result=%x\n",destination,bytes,rc); free(b->source); free(b); return rc; }
         b->next=m->backing; m->backing=b;
         for(size_t i=p;i<end;++i) m->permissions[i]|=16;
-        rc=svcSetProcessMemoryPermission(envGetOwnProcessHandle(),(u64)destination,bytes,Perm_Rw);
+        rc=svcSetProcessMemoryPermission(runtime_process_handle(),(u64)destination,bytes,Perm_Rw);
         if(R_FAILED(rc)) { if(memory_log) fprintf(memory_log,"MMAP_LAZY_PUBLISH_FAIL address=%p bytes=%zu result=%x\n",destination,bytes,rc); return rc; }
         for(size_t i=p;i<end;++i) m->permissions[i]=(m->permissions[i]&~3)|3;
         if(memory_log) fprintf(memory_log,"MMAP_LAZY_COMMIT address=%p bytes=%zu\n",destination,bytes);
@@ -189,7 +190,7 @@ static Result unmap_lazy_pages(Mapping *m,size_t first,size_t pages) {
             if(!(m->permissions[p]&16)) { ++p; continue; }
             size_t next=p+1; while(next<end && (m->permissions[next]&16)) ++next;
             virtmemLock();
-            Result rc=svcUnmapProcessCodeMemory(envGetOwnProcessHandle(),(u64)(m->base+p*4096),(u64)(b->source+(p-b->first)*4096),(next-p)*4096);
+            Result rc=svcUnmapProcessCodeMemory(runtime_process_handle(),(u64)(m->base+p*4096),(u64)(b->source+(p-b->first)*4096),(next-p)*4096);
             virtmemUnlock();
             if(R_FAILED(rc)) return rc;
             for(size_t i=p;i<next;++i) m->permissions[i]&=~19;
@@ -223,7 +224,7 @@ static Result set_mapping_permissions(Mapping *m,size_t first,size_t pages,int p
         size_t count=(info.size-(address-info.addr))/4096;
         if(count>end-page) count=end-page;
         if(info.perm!=(unsigned)prot) {
-            rc=m->lazy ? svcSetProcessMemoryPermission(envGetOwnProcessHandle(),address,count*4096,prot) : svcSetMemoryPermission((void *)address,count*4096,prot);
+            rc=m->lazy ? svcSetProcessMemoryPermission(runtime_process_handle(),address,count*4096,prot) : svcSetMemoryPermission((void *)address,count*4096,prot);
             if(R_FAILED(rc)) {
                 if(memory_log) fprintf(memory_log,"MEMORY_PERMISSION_RUN_FAIL address=%p bytes=%zu old_perm=%x new_perm=%x result=%x\n",(void *)address,count*4096,info.perm,prot,rc);
                 return rc;

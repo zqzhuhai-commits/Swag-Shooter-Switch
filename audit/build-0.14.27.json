@@ -1,0 +1,9 @@
+{
+  "version": "0.14.27",
+  "artifact": "swag-switch-stage14.27-audio-cjk.nro",
+  "bytes": 450754453,
+  "sha256": "909485b591e537bf18e7f3f70f5a8b86d48b55dbd6e4ba91d7e352e046daa7d4",
+  "romfs_files_verified": 1863,
+  "cjk_asset_files_verified": 7,
+  "hardware_validation": "pending"
+}

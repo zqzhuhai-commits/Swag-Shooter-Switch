@@ -1,0 +1,15 @@
+{
+  "version": "0.4.0",
+  "artifact": "swag-switch-stage4-batch.nro",
+  "bytes": 74499641,
+  "sha256": "390de121830d15afc03b7b31d7cd1b04251ad672ed6bfaf8227a106f1c5e7949",
+  "compiler_checks": "-Wall -Wextra -Werror: PASS",
+  "nro_romfs_bounds_and_9_embedded_hashes": "PASS",
+  "stage1_device_tests": "PASS",
+  "stage2_device_tests": "PASS",
+  "stage3_device_tests": "PASS",
+  "stage4_device_tests": "NOT RUN",
+  "libmain_unresolved_strong_imports": 0,
+  "actual_libmain_jni_registration_probe": "enabled conditionally; not yet run on hardware",
+  "unity_engine_started": false
+}

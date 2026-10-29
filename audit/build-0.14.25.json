@@ -1,0 +1,19 @@
+{
+  "version": "0.14.25",
+  "artifact": "swag-switch-stage14.25-unity-input.nro",
+  "bytes": 450742165,
+  "sha256": "df970b53d35c59fe9819c3d968db3c7e60ca67d258a5f682bfd8e640cb81d3e0",
+  "local_build": "PASS",
+  "embedded_files_verified": 1863,
+  "new_runtime_hardware_validation": "PENDING",
+  "previous_device_version": "0.14.24",
+  "previous_hid_input": "OBSERVED",
+  "previous_jni_tests": "PASS",
+  "previous_native_injection_return": 1,
+  "previous_menu_response": "NONE, user confirmed",
+  "previous_before_engine_ms": 7749,
+  "previous_runtime_fps": "approximately 30",
+  "engine_input_state": "new diagnostics pending hardware",
+  "input_root_cause_confirmed": false,
+  "playability_confirmed": false
+}

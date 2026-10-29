@@ -1,9 +1,9 @@
-# Swag Shooter Switch
+# 绝地精英 / SWAG Shooter Switch
 
-Experimental Android ARM64 Unity compatibility port for Atmosphère.
+Android ARM64 Unity compatibility port for Atmosphère. Game name: 绝地精英. Author: Xiao Fan.
 
-Current test source: **0.14.23, input hardware validation pending.** The user confirmed that 0.14.22 displays the opening animation and reaches the menu after the EGL window-size query fix. Version 0.14.23 adds single-pointer touchscreen injection and basic menu navigation (D-pad/left stick, A confirm, B back). Multitouch and full combat controls remain incomplete; this is not yet a fully playable port. Startup uses an offline policy with immediate DNS failure.
+Current test version: **0.14.34**. Users have reported gameplay, Chinese text, touch/controller input and automatic vehicle state recognition. The native standalone NSP is structurally verified but still awaits installation/launch testing on hardware.
 
-See [中文说明](README.zh-CN.md) and [changes and validation history](CHANGELOG.zh-CN.md).
+The NSP contains the native program, full game RomFS and icon; no external NRO is required. Saves/cache remain at `/switch/swag-userdata/`. Driving uses the left stick vertically and the right stick horizontally, plus four-way D-pad and triggers. Logging is off unless `/switch/swag-debug.flag` exists.
 
-Game binaries and commercial assets are not included. Build with devkitPro; provide game assets locally in romfs/game. The eventual target is a single NSP; current test artifacts are NROs.
+See [中文说明](README.zh-CN.md), [packaging](packaging/README.md), and [changes](CHANGELOG.zh-CN.md). Repository contains source/tools/icon/verification only; provide game assets and your own local key file when building. Never commit keys, game binaries, raw device logs or packaged NSP/NRO files.

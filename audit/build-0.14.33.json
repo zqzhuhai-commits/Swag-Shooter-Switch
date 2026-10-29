@@ -1,0 +1,10 @@
+{
+  "version": "0.14.33",
+  "artifact": "swag-switch-stage14.33-driving-controls.nro",
+  "bytes": 450770837,
+  "sha256": "31b36187069d94c09876f2499c256e1c8d119ddb98e6a3586c467a65411b6263",
+  "romfs_files_verified": 1863,
+  "hardware_auto_vehicle": "previous build confirmed by user",
+  "new_controls_validation": "pending",
+  "logging_default": false
+}

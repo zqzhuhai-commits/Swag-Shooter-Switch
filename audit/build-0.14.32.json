@@ -1,0 +1,10 @@
+{
+  "version": "0.14.32",
+  "artifact": "swag-switch-stage14.32-quiet.nro",
+  "bytes": 450766741,
+  "sha256": "0a525b35c8ccd1e53617989c41b794bde4d5591a174d0329b271fb5639333ae4",
+  "romfs_files_verified": 1863,
+  "logging_default": false,
+  "diagnostics_flag": "/switch/swag-debug.flag",
+  "performance_validation": "pending_hardware_comparison"
+}

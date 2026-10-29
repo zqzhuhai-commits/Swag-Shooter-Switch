@@ -24,6 +24,11 @@ static AndroidFile standards[3];
 static FILE *standard_native[3], *game_log;
 static Stream *streams;
 static Mutex io_lock;
+static int io_trace(FILE *stream,const char *format,...) {
+    if(!strncmp(format,"IO_STAT_FAIL",12) || !strncmp(format,"IO_PATH_REQUEST",15) || !strncmp(format,"IO_OPEN_TRANSLATED",18) || !strncmp(format,"IO_CLOSE",8) || !strncmp(format,"IO_STAT_OPEN_HANDLE",19)) return 0;
+    va_list args; va_start(args,format); int result=vfprintf(stream,format,args); va_end(args); return result;
+}
+#define fprintf io_trace
 static unsigned next_alias=0x10000;
 static Mutex random_lock;
 static int random_initialized;
@@ -110,6 +115,27 @@ static int map_path(const char *path, int writing, char out[1024]) {
     normalized[length] = 0;
     if (!save && !strcmp(normalized,"assets")) normalized[0]=0;
     if (!save && !strncmp(normalized,"assets/",7)) memmove(normalized,normalized+7,strlen(normalized+7)+1);
+    if(!save && !strncmp(normalized,"bin/Data/",9)) {
+        static const char *const fonts[]={"10c8f2a48584d2b4597d211403f44d68","1b2bcabbc518a064492abdee5540a0d7","789bce8c0219262468dba0450de625dd","0370bfcfca7adeb419a60a7d7f57bff3","6d6708753e95e9c4cb1b90615b27ff69","sharedassets0.assets","sharedassets1.assets"};
+        const char *name=normalized+9;
+        for(unsigned i=0;i<sizeof fonts/sizeof *fonts;++i) {
+            size_t length=strlen(fonts[i]);
+            int exact=!strcmp(name,fonts[i]);
+            int split=!strncmp(name,fonts[i],length) && !strncmp(name+length,".split",6);
+            if(!exact && !split) continue;
+            char replacement[1024]; struct stat status;
+            snprintf(replacement,sizeof replacement,"romfs:/game/font-assets/%s",fonts[i]);
+            if(stat(replacement,&status) || !S_ISREG(status.st_mode) || status.st_size<=0) break;
+            /* The replacement is a complete serialized file. Never mix its
+             * expanded Font offsets with original .splitN payloads. */
+            if(split) return fail(ENOENT);
+            strcpy(out,replacement);
+            static unsigned seen;
+            if(!(__atomic_fetch_or(&seen,1u<<i,__ATOMIC_RELAXED)&(1u<<i)))
+                fprintf(game_log,"FONT_ASSET_REDIRECT name=%s bytes=%lld cjk_override=ENABLED\n",fonts[i],(long long)status.st_size);
+            return 0;
+        }
+    }
     snprintf(out, 1024, "%s/%s", save ? "sdmc:/switch/swag-userdata" : "romfs:/game", normalized);
     return 0;
 }
@@ -551,6 +577,23 @@ static int prepare_metadata_cache(FILE *log) {
     for(unsigned i=0;i<2;++i) if(mkdir(dirs[i],0777) && errno!=EEXIST) { fprintf(log,"CACHE_DIRECTORY_FAIL path=%s errno=%d\n",dirs[i],errno); return -1; }
     FILE *input=fopen(source,"rb"),*output=NULL;
     if(!input) return -1;
+    output=fopen(target,"rb");
+    if(output) {
+        unsigned char original[32768],cached[32768]; size_t bytes=0,got; int equal=1;
+        while((got=fread(original,1,sizeof original,input))) {
+            if(fread(cached,1,got,output)!=got || memcmp(original,cached,got)) { equal=0; break; }
+            bytes+=got;
+        }
+        equal=equal && !ferror(input) && !ferror(output) && fgetc(output)==EOF;
+        fclose(output); output=NULL;
+        if(equal && bytes) {
+            fclose(input);
+            int result=b_chmod("/il2cpp/Metadata/global-metadata.dat",0444);
+            fprintf(log,"CACHE_METADATA_REUSE result=%s bytes=%zu full_comparison=COMPLETE\n",result ? "FAIL":"PASS",bytes);
+            return result;
+        }
+        rewind(input);
+    }
     output=fopen(temp,"wb");
     if(!output) { fclose(input); return -1; }
     unsigned char buffer[32768]; size_t count,total=0; int error=0;
@@ -714,6 +757,9 @@ int runtime_io_selftest(FILE *log) {
     errors += map_path("/il2cpp/Metadata/global-metadata.dat",1,real)!=0 || strcmp(real,"sdmc:/switch/swag-userdata/il2cpp/Metadata/global-metadata.dat");
     errors += map_path("/il2cpp/../../outside",1,real)!=-1;
     errors += map_path("libunity.so", 1, real) != -1;
+    errors += map_path("assets/bin/Data/sharedassets0.assets",0,real)!=0 || strcmp(real,"romfs:/game/font-assets/sharedassets0.assets");
+    errors += map_path("bin/Data/sharedassets1.assets.split0",0,real)!=-1;
+    errors += map_path("bin/Data/level0",0,real)!=0 || strcmp(real,"romfs:/game/bin/Data/level0");
     file = b_fopen("libunity.so", "rb");
     if (!file) ++errors;
     else { errors += b_fread(text, 1, 4, file) != 4 || memcmp(text, ELFMAG, 4); errors += b_fclose(file) != 0; }
@@ -734,5 +780,6 @@ int runtime_io_selftest(FILE *log) {
     fprintf(log, "IO_TEST_DONE errors=%d bindings=%zu\n", errors, sizeof bindings / sizeof *bindings);
     return errors ? -1 : 0;
 }
+int runtime_io_prepare(FILE *log) { return prepare_metadata_cache(log); }
 
 int io_gc_lock_free(void) { return __atomic_load_n(&io_lock,__ATOMIC_ACQUIRE)==0; }

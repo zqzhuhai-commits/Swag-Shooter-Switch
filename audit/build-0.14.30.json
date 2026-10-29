@@ -1,0 +1,11 @@
+{
+  "version": "0.14.30",
+  "artifact": "swag-switch-stage14.30-input-fixes.nro",
+  "bytes": 450762645,
+  "sha256": "9937fa135ce27b0a87d842c5b6351e7a24548c8ad59f8d01d3f87dfb8c13be98",
+  "romfs_files_verified": 1863,
+  "name_author_nacp_verified": true,
+  "hardware_validation": "pending",
+  "format": "NRO",
+  "final_single_file_NSP": "pending"
+}

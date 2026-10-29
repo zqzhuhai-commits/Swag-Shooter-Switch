@@ -1,3 +1,4 @@
+#include "diagnostics.h"
 #include <switch.h>
 #include <stdio.h>
 #include <stdarg.h>
@@ -11,17 +12,24 @@
 #include "startup_probe.h"
 #include "guest_threads.h"
 #include "switch_game_input.h"
+#include "vehicle_state.h"
 extern int jni_choreo_captured(void);
 extern int jni_take_handler_message(void);
 extern void jni_handlemessage(void *);
 extern int jni_choreo_doframe(void *,long);
 extern void *jni_switch_touch_event(int,float,float,long);
 extern void *jni_switch_key_event(int,int,long);
+extern void jni_switch_release_event(void *);
+extern void *jni_switch_motion_event(int,int,const int *,const float *,const float *,long);
 static void *(*looper_domain)(void);
 static void *(*looper_attach)(void *);
 static void (*looper_detach)(void *);
 static unsigned looper_stop;
+unsigned unity_audio_stop;
+extern void *unity_audio_entry(void *);
 void unity_host_set_il2cpp(AndroidElf *module) {
+    vehicle_state_bind(module);
+    switch_game_input_set_resolver((void *(*)(const char *))elf_export(module,"il2cpp_resolve_icall"));
     looper_domain=(void *(*)(void))elf_export(module,"il2cpp_domain_get");
     looper_attach=(void *(*)(void *))elf_export(module,"il2cpp_thread_attach");
     looper_detach=(void (*)(void *))elf_export(module,"il2cpp_thread_detach");
@@ -53,7 +61,8 @@ static int guard_active;
 static Handle guard_thread;
 void unity_host_set_log(FILE *log) { unity_log = log; }
 int debugPrintf(const char *format, ...) {
-    if (!unity_log) return 0;
+    if (!unity_log || !diagnostics_enabled()) return 0;
+    if(!strncmp(format,"jni_shim:",9) || !strncmp(format,"JNI_LOCAL_FRAME",15) || !strncmp(format,"[PREFS]",7) || !strncmp(format,"[KEYEV]",7)) return 0;
     va_list args; va_start(args, format); int n = vfprintf(unity_log, format, args); va_end(args); return n;
 }
 const char *hd_game_dir(void) { return "romfs:/game"; }
@@ -97,6 +106,18 @@ static int64_t probe_static_long_v(uintptr_t fn,void *env,void *clazz,void *meth
     va_list ap; va_start(ap,method);
     int64_t result=((int64_t (*)(void *,void *,void *,va_list))fn)(env,clazz,method,ap);
     va_end(ap); return result;
+}
+static void *probe_static_object_v(uintptr_t fn,void *env,void *clazz,void *method,...) {
+    va_list ap; va_start(ap,method);
+    void *result=((void *(*)(void *,void *,void *,va_list))fn)(env,clazz,method,ap);
+    va_end(ap); return result;
+}
+typedef struct { uintptr_t *table; void *env,*event,*method; int errors; } InputThreadProbe;
+static void *input_thread_probe(void *raw) {
+    InputThreadProbe *p=raw;
+    int (*get)(void *,void *,void *,...)=(int (*)(void *,void *,void *,...))p->table[49];
+    p->errors=get(p->env,p->event,p->method)!=66;
+    return NULL;
 }
 int unity_host_bridge_test(AndroidElf *module, FILE *log) {
     void *vm, *env; int errors = 0;
@@ -171,13 +192,73 @@ int unity_host_bridge_test(AndroidElf *module, FILE *log) {
         void *down=get_method(env,motion_class,"getDownTime","()J");
         input_errors+=integer(env,event,action)!=0 || integer(env,event,count)!=1;
         input_errors+=number(env,event,x,0)!=123 || number(env,event,y,0)!=456;
-        jni_switch_touch_event(2,124,457,200);
+        void *old_event=event;
+        event=jni_switch_touch_event(2,124,457,200);
+        input_errors+=integer(env,old_event,action)!=0 || number(env,old_event,x,0)!=123;
+        jni_switch_release_event(old_event);
         input_errors+=integer(env,event,action)!=2 || event_time(env,event,down)!=100;
-        jni_switch_touch_event(1,124,457,210);
+        old_event=event;
+        event=jni_switch_touch_event(1,124,457,210);
+        jni_switch_release_event(old_event);
         input_errors+=integer(env,event,action)!=1;
+        jni_switch_release_event(event);
         event=jni_switch_key_event(0,66,220);
         input_errors+=!instance(env,event,key_class) || instance(env,event,motion_class);
         input_errors+=integer(env,event,get_method(env,key_class,"getKeyCode","()I"))!=66;
+        void *(*global_ref)(void *,void *)=(void *(*)(void *,void *))table[21];
+        void (*delete_global)(void *,void *)=(void (*)(void *,void *))table[22];
+        void *retained=global_ref(env,event);
+        jni_switch_release_event(event);
+        input_errors+=integer(env,retained,get_method(env,key_class,"getKeyCode","()I"))!=66;
+        InputThreadProbe probe={table,env,retained,get_method(env,key_class,"getKeyCode","()I"),0};
+        uintptr_t thread=0;
+        int created=guest_thread_create(&thread,NULL,input_thread_probe,&probe);
+        input_errors+=created!=0;
+        if(!created) input_errors+=guest_thread_join(thread,NULL)!=0 || probe.errors;
+        delete_global(env,retained);
+        int ids[2]={3,7}; float xs[2]={123,700},ys[2]={456,200};
+        event=jni_switch_motion_event(5|(1<<8),2,ids,xs,ys,300);
+        input_errors+=integer(env,event,count)!=2 || integer(env,event,action)!=(5|(1<<8));
+        input_errors+=integer(env,event,get_method(env,motion_class,"getPointerId","(I)I"),1)!=7;
+        input_errors+=number(env,event,x,1)!=700 || number(env,event,y,1)!=200;
+        int clone_errors=0;
+        int (*push)(void *,int)=(int (*)(void *,int))table[19];
+        void *(*pop)(void *,void *)=(void *(*)(void *,void *))table[20];
+        void *(*call)(void *,void *,void *,...)=(void *(*)(void *,void *,void *,...))table[114];
+        void *(*call_a)(void *,void *,void *,const void *)=(void *(*)(void *,void *,void *,const void *))table[116];
+        void (*delete_local)(void *,void *)=(void (*)(void *,void *))table[23];
+        void *obtain=get_static(env,motion_class,"obtain","(Landroid/view/MotionEvent;)Landroid/view/MotionEvent;");
+        void *no_history=get_static(env,motion_class,"obtainNoHistory","(Landroid/view/MotionEvent;)Landroid/view/MotionEvent;");
+        void *copy_retained=NULL;
+        if(push(env,8)) ++clone_errors;
+        else {
+            void *copy=call(env,motion_class,obtain,event);
+            void *argument[1]={event};
+            void *copy_a=call_a(env,motion_class,no_history,argument);
+            void *copy_v=probe_static_object_v(table[115],env,motion_class,obtain,event);
+            clone_errors+=!copy || !copy_a || !copy_v || copy==event || copy_a==copy || copy_v==copy;
+            if(copy) {
+                clone_errors+=integer(env,copy,count)!=2 || number(env,copy,x,1)!=700;
+                copy_retained=global_ref(env,copy);
+            }
+            if(copy_a) delete_local(env,copy_a);
+            pop(env,NULL);
+        }
+        for(unsigned cycle=0;cycle<520;++cycle) {
+            if(push(env,4)) { ++clone_errors; break; }
+            void *copy=call(env,motion_class,obtain,event);
+            clone_errors+=copy==NULL;
+            pop(env,NULL);
+            if(!copy) break;
+        }
+        jni_switch_release_event(event);
+        if(copy_retained) {
+            clone_errors+=integer(env,copy_retained,count)!=2 || number(env,copy_retained,x,1)!=700;
+            delete_global(env,copy_retained);
+        }
+        input_errors+=clone_errors;
+        fprintf(log,"JNI_MOTION_COPY_TEST errors=%d direct_v_a=CHECKED local_frame_cleanup=CHECKED retain_after_pop=CHECKED pool_reuse_cycles=520\n",clone_errors);
+        fprintf(log,"JNI_INPUT_LIFETIME errors=%d immutable_snapshots=CHECKED global_reference=CHECKED cross_thread=CHECKED multitouch=CHECKED\n",input_errors);
         errors+=input_errors;
         fprintf(log,"JNI_GAME_INPUT_TEST errors=%d touch_class_coords_time=CHECKED key_class_code=CHECKED hardware_input=PENDING\n",input_errors);
     }
@@ -200,12 +281,17 @@ int unity_host_bridge_test(AndroidElf *module, FILE *log) {
 int unity_host_run(FILE *log) {
     startup_engine_progress();
     void *vm,*env; unity_host_get_vm(&vm,&env); (void)vm;
-    uintptr_t looper=0;
+    uintptr_t looper=0,audio=0;
+    int audio_started=0;
     if(!looper_domain || !looper_attach || !looper_detach) { fprintf(log,"ENGINE_LOOPER_BLOCKED missing_il2cpp_exports=1\n"); return -1; }
     __atomic_store_n(&looper_stop,0,__ATOMIC_RELEASE);
     int looper_error=guest_thread_create(&looper,NULL,looper_entry,env);
     fprintf(log,"ENGINE_LOOPER_CREATE result=%d\n",looper_error); fflush(log);
     if(looper_error) return -1;
+    __atomic_store_n(&unity_audio_stop,0,__ATOMIC_RELEASE);
+    int audio_error=guest_thread_create(&audio,NULL,unity_audio_entry,env);
+    audio_started=audio_error==0;
+    fprintf(log,"GAME_AUDIO_THREAD result=%d\n",audio_error);
     static unsigned char player[32],activity[32],surface[32];
     unity_host_set_log(log);
     if(setjmp(jni_guard)) { __atomic_store_n(&guard_active,0,__ATOMIC_RELEASE); fprintf(log,"ENGINE_LIFECYCLE_ABORT unsupported_jni=1\n"); goto fail; }
@@ -236,19 +322,32 @@ int unity_host_run(FILE *log) {
     if(switch_game_input_init(log)) goto fail;
     fprintf(log,"ENGINE_LOOP_POLICY frame_limit=NONE idle_timeout_seconds=300 visual_confirmation=REQUIRED\n"); fflush(log);
     startup_engine_progress();
+    u64 timing_tick=armGetSystemTick();
     for(unsigned long long frame=0;appletMainLoop();++frame) {
+        u64 frame_tick=armGetSystemTick();
         if(frame>0) switch_game_input_poll(env,player);
-        if(frame<10 || frame%60==0) { fprintf(log,"ENGINE_RENDER_BEGIN frame=%llu\n",frame); fflush(log); }
+        if(diagnostics_enabled() && frame<3) { fprintf(log,"ENGINE_RENDER_BEGIN frame=%llu\n",frame); fflush(log); }
         int running=((unsigned char (*)(void *,void *))render)(env,player);
+        switch_game_input_after_frame();
         startup_engine_progress();
-        if(frame<10 || frame%60==0 || !running) { fprintf(log,"ENGINE_RENDER_END frame=%llu result=%d visual_confirmation=REQUIRED\n",frame,running); fflush(log); }
+        if(diagnostics_enabled() && (frame<3 || !running)) { fprintf(log,"ENGINE_RENDER_END frame=%llu result=%d visual_confirmation=REQUIRED\n",frame,running); fflush(log); }
         if(!running) break;
-        jni_poll_java_callbacks(env); startup_engine_progress(); svcSleepThread(16000000);
+        jni_poll_java_callbacks(env); startup_engine_progress();
+        u64 elapsed=armTicksToNs(armGetSystemTick()-frame_tick);
+        if(elapsed<16666667) svcSleepThread(16666667-elapsed);
+        if(diagnostics_enabled() && frame && frame%300==0) {
+            u64 ns=armTicksToNs(armGetSystemTick()-timing_tick); timing_tick=armGetSystemTick();
+            fprintf(log,"FRAME_TIMING frames=300 elapsed_ms=%llu average_fps=%.2f\n",(unsigned long long)(ns/1000000),ns ? 300000000000.0/ns : 0.0); fflush(log);
+        }
     }
+    __atomic_store_n(&unity_audio_stop,1,__ATOMIC_RELEASE);
+    if(audio_started) guest_thread_join(audio,NULL);
     __atomic_store_n(&looper_stop,1,__ATOMIC_RELEASE);
     guest_thread_join(looper,NULL);
     __atomic_store_n(&guard_active,0,__ATOMIC_RELEASE); return 0;
 fail:
+    __atomic_store_n(&unity_audio_stop,1,__ATOMIC_RELEASE);
+    if(audio_started) guest_thread_join(audio,NULL);
     __atomic_store_n(&looper_stop,1,__ATOMIC_RELEASE);
     guest_thread_join(looper,NULL);
     __atomic_store_n(&guard_active,0,__ATOMIC_RELEASE); return -1;

@@ -1,0 +1,17 @@
+{
+  "version": "0.14.26",
+  "artifact": "swag-switch-stage14.26-r36s-controls.nro",
+  "bytes": 450750357,
+  "sha256": "872acee9c412e685abbcea43168c0eda2f3ced0c909f671937ae1f37b1085e0e",
+  "local_build": "PASS",
+  "embedded_files_verified": 1863,
+  "new_runtime_hardware_validation": "PENDING",
+  "previous_device_version": "0.14.25",
+  "previous_unity_return_key": "OBSERVED",
+  "previous_unity_touch_count_during_hid_touch": 0,
+  "confirmed_missing_conversion": "MotionEvent.obtain(MotionEvent) returns placeholder in old shim",
+  "new_tests": ["copy via direct/V/A JNI", "local ref cleanup", "global ref after pop", "520 pool reuse cycles", "controller action IDs", "move/look/fire simultaneous contacts"],
+  "controller_profile": "R36S screenshot based, Switch hit targets pending validation",
+  "cursor_chord": "L+R",
+  "playability_confirmed": false
+}

@@ -47,3 +47,7 @@ try {
     $env:DEVKITPRO = $previousDevkitPro
     $env:DEVKITA64 = $previousDevkitA64
 }
+
+# Windows native tools may encode Unicode argv with the system codepage.
+& python (Join-Path $projectDir tools/fix_nacp_metadata.py) $projectDir
+if ($LASTEXITCODE) { throw UTF-8 application metadata verification failed. }

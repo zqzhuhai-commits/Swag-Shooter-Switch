@@ -1,3 +1,4 @@
+#include "diagnostics.h"
 #include <switch.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -21,8 +22,9 @@ void crash_trace_terminal(const char *operation,int status) {
     snprintf(line,sizeof line,"GUEST_TERMINAL operation=%s status=%d\n",operation,status); emit(line);
 }
 void crash_trace_init(FILE *log) {
+    if(!diagnostics_enabled()) return;
     crash_fd=open("sdmc:/switch/swag-switch-crash.log",O_WRONLY|O_CREAT|O_TRUNC,0666);
-    emit("CRASH_TRACE_ARMED version=0.14.23; no fault recorded yet\n");
+    emit("CRASH_TRACE_ARMED version=0.14.26; no fault recorded yet\n");
     fprintf(log,"CRASH_TRACE_ARMED fd=%d path=/switch/swag-switch-crash.log\n",crash_fd);
 }
 void crash_trace_module(unsigned index,uintptr_t base,size_t size) {

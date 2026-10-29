@@ -1138,19 +1138,72 @@ struct hk_inject_s { int action, keycode, source, deviceId, metaState, repeat,
 struct hk_inject_s g_hk_inject;       /* exportado p/ main_recon */
 static int g_obj_keyevent;            /* sentinela do objeto KeyEvent */
 void *hk_keyevent_object(void) { return &g_obj_keyevent; }
-static _Thread_local struct { int action; float x,y; long event_time,down_time; } switch_touch;
+typedef struct { unsigned refs; int kind,action,key,count,ids[16]; float x,y,xs[16],ys[16]; long event_time,down_time; } SwitchEvent;
+static SwitchEvent switch_events[512];
+static void track_input_local(void *object);
+static void untrack_input_local(void *object);
+static long touch_down,key_down[256];
+static SwitchEvent *event_record(void *object) {
+  uintptr_t p=(uintptr_t)object,base=(uintptr_t)switch_events;
+  if(p<base || p-base>=sizeof switch_events || (p-base)%sizeof(SwitchEvent)) return NULL;
+  SwitchEvent *event=object;
+  return __atomic_load_n(&event->refs,__ATOMIC_ACQUIRE) ? event : NULL;
+}
+static SwitchEvent *new_event(void) {
+  for(unsigned i=0;i<512;++i) {
+    unsigned expected=0;
+    if(__atomic_compare_exchange_n(&switch_events[i].refs,&expected,1,0,__ATOMIC_ACQ_REL,__ATOMIC_RELAXED)) return &switch_events[i];
+  }
+  debugPrintf("GAME_INPUT_POOL_FULL dropped=1\n"); return NULL;
+}
+void jni_switch_release_event(void *object) {
+  SwitchEvent *event=event_record(object);
+  if(event) __atomic_sub_fetch(&event->refs,1,__ATOMIC_ACQ_REL);
+}
+static void retain_event(void *object) {
+  SwitchEvent *event=event_record(object);
+  if(event) __atomic_add_fetch(&event->refs,1,__ATOMIC_RELAXED);
+}
+static void *clone_motion_event(void *object) {
+  SwitchEvent *original=event_record(object);
+  if(!original || original->kind!=1) return NULL;
+  SwitchEvent *copy=new_event(); if(!copy) return NULL;
+  memcpy((char *)copy+offsetof(SwitchEvent,kind),(char *)original+offsetof(SwitchEvent,kind),sizeof *copy - offsetof(SwitchEvent,kind));
+  track_input_local(copy);
+  static unsigned copies;
+  if(__atomic_fetch_add(&copies,1,__ATOMIC_RELAXED)<12) debugPrintf("INPUT_MOTION_COPY action=%d pointers=%d x=%.1f y=%.1f\n",copy->action,copy->count,copy->xs[0],copy->ys[0]);
+  return copy;
+}
 void *jni_switch_touch_event(int action,float x,float y,long milliseconds) {
-  if(action==0) switch_touch.down_time=milliseconds;
-  switch_touch.action=action; switch_touch.x=x; switch_touch.y=y; switch_touch.event_time=milliseconds;
-  return &switch_touch;
+  SwitchEvent *event=new_event(); if(!event) return NULL;
+  if(action==0) touch_down=milliseconds;
+  event->kind=1; event->action=action; event->x=x; event->y=y; event->count=1; event->ids[0]=0; event->xs[0]=x; event->ys[0]=y; event->event_time=milliseconds; event->down_time=touch_down;
+  return event;
+}
+void *jni_switch_motion_event(int action,int count,const int *ids,const float *xs,const float *ys,long milliseconds) {
+  if(count<1 || count>16) return NULL;
+  SwitchEvent *event=jni_switch_touch_event(action,xs[0],ys[0],milliseconds);
+  if(!event) return NULL;
+  event->count=count;
+  memcpy(event->ids,ids,count*sizeof *ids); memcpy(event->xs,xs,count*sizeof *xs); memcpy(event->ys,ys,count*sizeof *ys);
+  return event;
 }
 void *jni_switch_key_event(int action,int key,long milliseconds) {
-  if(action==0) g_hk_inject.downTime=milliseconds;
-  g_hk_inject.action=action; g_hk_inject.keycode=key; g_hk_inject.source=0x101;
-  g_hk_inject.deviceId=0; g_hk_inject.eventTime=milliseconds;
-  return &g_obj_keyevent;
+  SwitchEvent *event=new_event(); if(!event) return NULL;
+  if(action==0 && key>=0 && key<256) key_down[key]=milliseconds;
+  event->kind=2; event->action=action; event->key=key; event->event_time=milliseconds;
+  event->down_time=key>=0 && key<256 ? key_down[key] : milliseconds;
+  return event;
 }
-static int touch_int(void *object,const char *name,int *out) {
+static int touch_int(void *object,const char *name,int index,int *out) {
+  SwitchEvent *record=event_record(object);
+  if(record && record->kind==2 && name) {
+    if(!strcmp(name,"getAction")) *out=record->action;
+    else if(!strcmp(name,"getKeyCode")) *out=record->key;
+    else if(!strcmp(name,"getSource")) *out=0x101;
+    else *out=0;
+    return 1;
+  }
   if(object==&g_obj_keyevent && name) {
     if(!strcmp(name,"getAction")) *out=g_hk_inject.action;
     else if(!strcmp(name,"getKeyCode")) *out=g_hk_inject.keycode;
@@ -1159,24 +1212,36 @@ static int touch_int(void *object,const char *name,int *out) {
     else return 0;
     return 1;
   }
-  if(object!=&switch_touch || !name) return 0;
-  if(!strcmp(name,"getAction") || !strcmp(name,"getActionMasked")) *out=switch_touch.action;
-  else if(!strcmp(name,"getPointerCount")) *out=1;
+  if(!record || record->kind!=1 || !name) return 0;
+  if(!strcmp(name,"getAction")) *out=record->action;
+  else if(!strcmp(name,"getActionMasked")) *out=record->action&255;
+  else if(!strcmp(name,"getActionIndex")) *out=(record->action>>8)&255;
+  else if(!strcmp(name,"getPointerCount")) *out=record->count;
+  else if(!strcmp(name,"getPointerId")) *out=index>=0 && index<record->count ? record->ids[index] : -1;
+  else if(!strcmp(name,"findPointerIndex")) { *out=-1; for(int i=0;i<record->count;++i) if(record->ids[i]==index) *out=i; }
   else if(!strcmp(name,"getSource")) *out=0x1002;
   else if(!strcmp(name,"getToolType")) *out=1;
   else if(!strcmp(name,"getPointerId") || !strcmp(name,"findPointerIndex") || !strcmp(name,"getActionIndex") || !strcmp(name,"getDeviceId") || !strcmp(name,"getMetaState") || !strcmp(name,"getButtonState") || !strcmp(name,"getFlags") || !strcmp(name,"getEdgeFlags") || !strcmp(name,"getHistorySize")) *out=0;
   else return 0;
   return 1;
 }
-static int touch_float(void *object,const char *name,float *out) {
-  if(object!=&switch_touch || !name) return 0;
-  if(!strcmp(name,"getX") || !strcmp(name,"getRawX")) *out=switch_touch.x;
-  else if(!strcmp(name,"getY") || !strcmp(name,"getRawY")) *out=switch_touch.y;
-  else if(!strcmp(name,"getPressure")) *out=switch_touch.action==1 ? 0.0f : 1.0f;
+static int touch_float(void *object,const char *name,int index,float *out) {
+  SwitchEvent *record=event_record(object);
+  if(!record || record->kind!=1 || !name) return 0;
+  if(index<0 || index>=record->count) index=0;
+  if(!strcmp(name,"getX") || !strcmp(name,"getRawX")) *out=record->xs[index];
+  else if(!strcmp(name,"getY") || !strcmp(name,"getRawY")) *out=record->ys[index];
+  else if(!strcmp(name,"getPressure")) *out=record->action==1 ? 0.0f : 1.0f;
   else if(!strcmp(name,"getSize") || !strcmp(name,"getXPrecision") || !strcmp(name,"getYPrecision") || !strcmp(name,"getTouchMajor") || !strcmp(name,"getTouchMinor")) *out=1.0f;
   else if(!strcmp(name,"getOrientation") || !strcmp(name,"getAxisValue")) *out=0.0f;
   else return 0;
   return 1;
+}
+static void input_query_trace(void *object,void *method,const char *kind,double value) {
+  SwitchEvent *event=event_record(object);
+  static unsigned calls;
+  if(event && __atomic_fetch_add(&calls,1,__ATOMIC_RELAXED)<128)
+    debugPrintf("INPUT_JNI_QUERY event_kind=%d action=%d method=%s value_%s=%.3f\n",event->kind,event->action,mid_name(method) ? mid_name(method) : "unknown",kind,value);
 }
 static int g_gamepad_device;          /* sentinela do InputDevice (Xbox 360 virtual) */
 static int g_current_activity;        /* UnityPlayer.currentActivity fake */
@@ -1384,7 +1449,9 @@ static float jni_GetFloatField(void *env, void *obj, void *fieldID) {
 
 /* CallFloatMethodV (idx 56): Display.getRefreshRate() -> 60Hz (0 quebra o engine) */
 static float jni_CallFloatMethodV(void *env, void *obj, void *methodID, va_list ap) {
-  float value; if(touch_float(obj,mid_name(methodID),&value)) return value;
+  int pointer_index=0;
+  if(event_record(obj) && mid_sig(methodID) && !strncmp(mid_sig(methodID),"(I)",3)) pointer_index=va_arg(ap,int);
+  float value; if(touch_float(obj,mid_name(methodID),pointer_index,&value)) { input_query_trace(obj,methodID,"float",value); return value; }
   (void)env; (void)obj;
   const char *nm = mid_name(methodID);
   if (nm && strcmp(nm, "getRefreshRate") == 0) return 60.0f;
@@ -1403,7 +1470,8 @@ static float jni_CallFloatMethod(void *env, void *obj, void *methodID, ...) {
 }
 static float jni_CallFloatMethodA(void *env, void *obj, void *methodID,
                                   const jvalue *args) {
-  float value; if(touch_float(obj,mid_name(methodID),&value)) return value;
+  int pointer_index=args && mid_sig(methodID) && !strncmp(mid_sig(methodID),"(I)",3) ? args[0].i : 0;
+  float value; if(touch_float(obj,mid_name(methodID),pointer_index,&value)) { input_query_trace(obj,methodID,"float",value); return value; }
   (void)env;
   (void)obj;
   const char *nm = mid_name(methodID);
@@ -2014,7 +2082,9 @@ static unsigned char jni_CallBooleanMethodA(void *env, void *obj,
 /* CallIntMethod — variante V */
 static jint jni_CallIntMethodV(void *env, void *obj, void *methodID,
                                va_list ap) {
-  int value; if(touch_int(obj,mid_name(methodID),&value)) return value;
+  int pointer_index=0;
+  if(event_record(obj) && mid_sig(methodID) && !strncmp(mid_sig(methodID),"(I)",3)) pointer_index=va_arg(ap,int);
+  int value; if(touch_int(obj,mid_name(methodID),pointer_index,&value)) { input_query_trace(obj,methodID,"int",value); return value; }
   (void)env;
   const char *nm = mid_name(methodID);
   /* java.lang.String.length(). O Unity usa esse valor para dimensionar na
@@ -2120,7 +2190,8 @@ static jint jni_CallIntMethod(void *env, void *obj, void *methodID, ...) {
 }
 static jint jni_CallIntMethodA(void *env, void *obj, void *methodID,
                                const jvalue *args) {
-  int value; if(touch_int(obj,mid_name(methodID),&value)) return value;
+  int pointer_index=args && mid_sig(methodID) && !strncmp(mid_sig(methodID),"(I)",3) ? args[0].i : 0;
+  int value; if(touch_int(obj,mid_name(methodID),pointer_index,&value)) { input_query_trace(obj,methodID,"int",value); return value; }
   (void)env;
   const char *nm = mid_name(methodID);
   if (nm && strcmp(nm, "length") == 0 && is_jstring(obj))
@@ -2307,6 +2378,7 @@ static void *jni_CallStaticObjectMethodV(void *env, void *clazz,
                                          void *methodID, va_list ap) {
   (void)env;
   const char *nm = mid_name(methodID);
+  if(nm && (!strcmp(nm,"obtain") || !strcmp(nm,"obtainNoHistory")) && clazz==class_for("android/view/MotionEvent") && mid_sig(methodID) && !strcmp(mid_sig(methodID),"(Landroid/view/MotionEvent;)Landroid/view/MotionEvent;")) return clone_motion_event(va_arg(ap,void *));
   /* Unity 6 resolves the HandlerThread and Choreographer interfaces through
    * Class.forName(String, boolean, ClassLoader).  Returning a generic object
    * here prevents NewObject(HandlerThread), leaves the Java callback proxy
@@ -2372,6 +2444,7 @@ static void *jni_CallStaticObjectMethod(void *env, void *clazz, void *methodID, 
 }
 
 static void *jni_CallStaticObjectMethodA(void *env, void *clazz, void *methodID, const jvalue *args) {
+  if(mid_name(methodID) && (!strcmp(mid_name(methodID),"obtain") || !strcmp(mid_name(methodID),"obtainNoHistory")) && clazz==class_for("android/view/MotionEvent") && mid_sig(methodID) && !strcmp(mid_sig(methodID),"(Landroid/view/MotionEvent;)Landroid/view/MotionEvent;")) return clone_motion_event(args ? args[0].l : NULL);
   (void)env;
   const char *nm = mid_name(methodID);
   if (nm && !strcmp(nm, "forName") &&
@@ -2782,31 +2855,40 @@ static void jni_ReleaseStringUTFChars(void *env, void *jstr,
 
 /* Ref management */
 static void *jni_NewGlobalRef(void *env, void *obj) {
+  retain_event(obj);
   (void)env;
   return obj;
 }
 static void *jni_NewWeakGlobalRef(void *env, void *obj) {
+  retain_event(obj);
   (void)env;
   return obj;
 }
 static void *jni_NewLocalRef(void *env, void *obj) {
+  retain_event(obj);
+  track_input_local(obj);
   (void)env;
   return obj;
 }
 static void jni_DeleteGlobalRef(void *env, void *obj) {
+  jni_switch_release_event(obj);
   (void)env;
   (void)obj;
 }
 static void jni_DeleteLocalRef(void *env, void *obj) {
+  untrack_input_local(obj);
+  jni_switch_release_event(obj);
   (void)env;
   (void)obj;
 }
 static void jni_DeleteWeakGlobalRef(void *env, void *obj) {
+  jni_switch_release_event(obj);
   (void)env;
   (void)obj;
 }
 static void *jni_GetObjectClass(void *env, void *obj) {
-  if(obj==&switch_touch) return class_for("android/view/MotionEvent");
+  SwitchEvent *input=event_record(obj);
+  if(input) return class_for(input->kind==1 ? "android/view/MotionEvent" : "android/view/KeyEvent");
   (void)env;
   if (is_jstring(obj)) return class_for("java/lang/String");
   if (obj == &g_current_activity)
@@ -2828,7 +2910,16 @@ static void *jni_GetObjectClass(void *env, void *obj) {
   return &fake_obj_class;
 }
 static unsigned char jni_IsInstanceOf(void *env, void *obj, void *clazz) {
-  if(obj==&switch_touch) return clazz==class_for("android/view/MotionEvent") || clazz==class_for("android/view/InputEvent");
+  SwitchEvent *input=event_record(obj);
+  if(input) {
+    int result=clazz==class_for(input->kind==1 ? "android/view/MotionEvent" : "android/view/KeyEvent") || clazz==class_for("android/view/InputEvent");
+    static unsigned reported;
+    if(__atomic_fetch_add(&reported,1,__ATOMIC_RELAXED)<48) {
+      const char *name=class_name_for(clazz);
+      debugPrintf("INPUT_JNI_CLASS kind=%d target=%s result=%d\n",input->kind,name ? name : "unknown",result);
+    }
+    return result;
+  }
   (void)env;
   if (is_jstring(obj)) return clazz == class_for("java/lang/String");
   if (obj == &g_obj_keyevent) return clazz == class_for("android/view/KeyEvent");
@@ -2839,9 +2930,10 @@ static unsigned char jni_IsSameObject(void *env, void *a, void *b) {
 }
 /* CallLongMethod V — getEventTime/getDownTime do KeyEvent (retornam long) */
 static long jni_CallLongMethodV(void *env, void *obj, void *methodID, va_list ap) {
-  if(obj==&switch_touch && mid_name(methodID)) {
-    if(!strcmp(mid_name(methodID),"getEventTime")) return switch_touch.event_time;
-    if(!strcmp(mid_name(methodID),"getDownTime")) return switch_touch.down_time;
+  SwitchEvent *input=event_record(obj);
+  if(input && mid_name(methodID)) {
+    if(!strcmp(mid_name(methodID),"getEventTime")) return input->event_time;
+    if(!strcmp(mid_name(methodID),"getDownTime")) return input->down_time;
   }
   (void)env;
   if (obj == (void *)&g_long_box_sentinel) return g_doframe_nanos;  /* Long.longValue() do doFrame */
@@ -2886,9 +2978,10 @@ static long jni_CallLongMethod(void *env, void *obj, void *methodID, ...) {
 }
 static long jni_CallLongMethodA(void *env, void *obj, void *methodID,
                                 const jvalue *args) {
-  if(obj==&switch_touch && mid_name(methodID)) {
-    if(!strcmp(mid_name(methodID),"getEventTime")) return switch_touch.event_time;
-    if(!strcmp(mid_name(methodID),"getDownTime")) return switch_touch.down_time;
+  SwitchEvent *input=event_record(obj);
+  if(input && mid_name(methodID)) {
+    if(!strcmp(mid_name(methodID),"getEventTime")) return input->event_time;
+    if(!strcmp(mid_name(methodID),"getDownTime")) return input->down_time;
   }
   (void)env;
   if (obj == (void *)&g_long_box_sentinel) return g_doframe_nanos;
@@ -3433,18 +3526,39 @@ static jint jni_GetJavaVM(void *env, void **vm) {
  * object identities and reserve handle capacity; they do not collect objects. */
 static _Thread_local void **frame_spaces[128];
 static _Thread_local unsigned frame_depth;
+static _Thread_local unsigned frame_input_count[128],frame_capacity[128];
+static void track_input_local(void *object) {
+    if(!event_record(object) || !frame_depth) return;
+    unsigned depth=frame_depth-1,n=frame_input_count[depth];
+    if(n==frame_capacity[depth]) {
+        unsigned capacity=frame_capacity[depth]*2+16;
+        void **space=realloc(frame_spaces[depth],capacity*sizeof(void *));
+        if(!space) { debugPrintf("INPUT_LOCAL_REF_OOM\n"); abort(); }
+        frame_spaces[depth]=space; frame_capacity[depth]=capacity;
+    }
+    frame_spaces[depth][frame_input_count[depth]++]=object;
+}
+static void untrack_input_local(void *object) {
+    for(unsigned depth=frame_depth;depth>0;--depth)
+        for(unsigned n=frame_input_count[depth-1];n>0;--n)
+            if(frame_spaces[depth-1][n-1]==object) { frame_spaces[depth-1][n-1]=NULL; return; }
+}
 static int jni_PushLocalFrame(void *env,int capacity) {
     (void)env;
     if(capacity<0 || capacity>65536 || frame_depth==128) return -1;
     void **space=calloc(capacity ? (size_t)capacity : 1,sizeof(void *));
     if(!space) return -1;
-    frame_spaces[frame_depth++]=space;
+    frame_spaces[frame_depth]=space; frame_input_count[frame_depth]=0; frame_capacity[frame_depth]=capacity ? capacity : 1; ++frame_depth;
     debugPrintf("JNI_LOCAL_FRAME_PUSH depth=%u capacity=%d\n",frame_depth,capacity); return 0;
 }
 static void *jni_PopLocalFrame(void *env,void *result) {
     (void)env;
     if(!frame_depth) { extern void unity_jni_unsupported(unsigned) __attribute__((noreturn)); unity_jni_unsupported(20); }
-    free(frame_spaces[--frame_depth]); frame_spaces[frame_depth]=NULL;
+    retain_event(result);
+    --frame_depth;
+    for(unsigned i=0;i<frame_input_count[frame_depth];++i) jni_switch_release_event(frame_spaces[frame_depth][i]);
+    free(frame_spaces[frame_depth]); frame_spaces[frame_depth]=NULL; frame_input_count[frame_depth]=0; frame_capacity[frame_depth]=0;
+    track_input_local(result);
     debugPrintf("JNI_LOCAL_FRAME_POP depth=%u\n",frame_depth); return result;
 }
 void jni_install_indexed(uintptr_t *vt, int n);

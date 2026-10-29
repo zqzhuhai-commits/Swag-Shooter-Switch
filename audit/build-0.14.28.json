@@ -1,0 +1,9 @@
+{
+  "version": "0.14.28",
+  "artifact": "swag-switch-stage14.28-pubg-layout.nro",
+  "bytes": 450754453,
+  "sha256": "78651b7428f9ae4c0777b4065fba0047556fa0b2698f266f9ec8b145aa45ebbf",
+  "romfs_files_verified": 1863,
+  "hardware_validation": "pending",
+  "vehicle_controls": "not_fixed_pending_driving_hud_calibration"
+}

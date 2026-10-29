@@ -1,3 +1,4 @@
+#include "native_process.h"
 #include "nx_memory.h"
 #include <malloc.h>
 #include <stdlib.h>
@@ -21,7 +22,7 @@ int nx_memory_prepare(NxModuleMemory *m, size_t size, FILE *log) {
     return 0;
 }
 int nx_memory_publish(NxModuleMemory *m, AndroidElf *elf, FILE *log) {
-    Handle proc = envGetOwnProcessHandle();
+    Handle proc = runtime_process_handle();
     if (!proc || !envIsSyscallHinted(0x73) || !envIsSyscallHinted(0x77) ||
         !envIsSyscallHinted(0x78)) {
         fprintf(log, "Code mapping unavailable: process=%x svc73=%d svc77=%d svc78=%d\n",
@@ -92,7 +93,7 @@ int nx_memory_publish(NxModuleMemory *m, AndroidElf *elf, FILE *log) {
 int nx_memory_close(NxModuleMemory *m, FILE *log) {
     virtmemLock();
     if (m->mapped) {
-        Result rc = svcUnmapProcessCodeMemory(envGetOwnProcessHandle(), (u64)m->execution,
+        Result rc = svcUnmapProcessCodeMemory(runtime_process_handle(), (u64)m->execution,
                                               (u64)m->staging, m->size);
         if (R_FAILED(rc)) {
             virtmemUnlock();

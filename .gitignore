@@ -1,7 +1,11 @@
-build/
-romfs/game/
-romfs/tests/*.so
-*.nro
-*.elf
-*.nacp
+
+# Local packaging inputs and artifacts
+*.nsp
+*.partial
+*.keys
+keys.dat
+keys.txt
+*.log
 __pycache__/
+artwork/*.png
+artwork/*.jpg

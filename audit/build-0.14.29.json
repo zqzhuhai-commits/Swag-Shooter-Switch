@@ -1,0 +1,10 @@
+{
+  "version": "0.14.29",
+  "name": "绝地精英",
+  "author": "Xiao Fan",
+  "artifact": "swag-switch-stage14.29-calibrated-driving.nro",
+  "bytes": 450754453,
+  "sha256": "5c3fb6656ff4a56dbf4cf9e9d27893ac00b5ef9b6b08abe131010fba879aef92",
+  "romfs_files_verified": 1863,
+  "device_validation": "pending"
+}

@@ -1,0 +1,9 @@
+{
+  "version": "0.14.31",
+  "artifact": "swag-switch-stage14.31-auto-vehicle.nro",
+  "bytes": 450766741,
+  "sha256": "f494d4746f46d85759a74f14e3c8fd97400566224915d20ad7fdaf1044c7beb8",
+  "romfs_files_verified": 1863,
+  "il2cpp_api_exports_verified": 15,
+  "hardware_validation": "pending"
+}

@@ -1,3 +1,5 @@
+#include "native_process.h"
+#include "diagnostics.h"
 #include <switch.h>
 #include <malloc.h>
 #include <stdio.h>
@@ -97,15 +99,33 @@ static uintptr_t resolve_module(void *ctx, const char *name) {
     return basic ? basic : startup_missing(name);
 }
 static int fixture_batch(FILE *log) { return loader_selftest(log, 1); }
+static PrintConsole *boot_console;
+static void boot_progress(unsigned step) {
+    char bar[23];
+    unsigned filled=step*20/8;
+    bar[0]='['; for(unsigned i=0;i<20;++i) bar[i+1]=i<filled ? '=' : ' '; bar[21]=']'; bar[22]=0;
+    int width=boot_console->consoleWidth,height=boot_console->consoleHeight;
+    consoleClear();
+    printf("\x1b[%d;%dHPlease wait...",height/2-1,(width-14)/2+1);
+    printf("\x1b[%d;%dH%s",height/2+1,(width-22)/2+1,bar);
+    consoleUpdate(NULL);
+}
 int main(int argc, char **argv) {
+    u64 boot_tick=armGetSystemTick();
     runtime_io_set_executable_path(argc>0 ? argv[0] : NULL);
-    consoleInit(NULL);
-    printf("SWAG Switch - compatibility bring-up 0.14.23\n");
-    printf("This build probes the Android loader; gameplay is not started.\n\n");
-    FILE *log = fopen("sdmc:/switch/swag-switch.log", "w");
+    boot_console=consoleInit(NULL);
+    boot_progress(0);
+    FILE *log = diagnostics_open();
     if (!log) log = stdout;
-    setvbuf(log, NULL, _IOLBF, 0);
+    static char log_buffer[65536];
+    setvbuf(log,log_buffer,_IOFBF,sizeof log_buffer);
+    FILE *full_test_flag=fopen("sdmc:/switch/swag-full-tests.flag","rb");
+    int fast_start=full_test_flag==NULL;
+    if(full_test_flag) fclose(full_test_flag);
+    batch_set_fast_start(fast_start);
+    fprintf(log,"STARTUP_MODE fast=%d full_test_flag=/switch/swag-full-tests.flag\n",fast_start);
     crash_trace_init(log);
+    if(R_FAILED(runtime_process_initialize(log))) { printf("Startup failed: process handle unavailable.\n"); consoleUpdate(NULL); svcSleepThread(5000000000ULL); svcExitProcess(); }
     Thread batch_watcher;
     int watcher_running = 0;
     Result watcher_rc = threadCreate(&batch_watcher, batch_watchdog, log, NULL, 0x8000, 0x2c, -2);
@@ -114,19 +134,17 @@ int main(int argc, char **argv) {
         if (R_SUCCEEDED(watcher_rc)) watcher_running = 1;
         else threadClose(&batch_watcher);
     }
-    fprintf(log, "SWAG-NX v0.14.23 lazy-memory; applet=%u own-process=%x\n",
-            (unsigned)appletGetAppletType(), envGetOwnProcessHandle());
+    fprintf(log, "SWAG-NX v0.14.34 lazy-memory; applet=%u own-process=%x\n",
+            (unsigned)appletGetAppletType(), runtime_process_handle());
     runtime_services_init(log); guest_memory_set_log(log); startup_log(log); android_graphics_set_log(log);
     guest_system_set_log(log); unity_host_set_log(log);
     if(android_graphics_prepare(log)) { fprintf(log,"ENGINE_START_BLOCKED graphics_preflight_failed=1\n"); fflush(log); svcExitProcess(); }
     int memory_ok = batch_run("exec_memory", nx_memory_smoke_test, 1, log);
-    printf("Executable memory: %s\n", memory_ok ? "PASS" : "FAIL (see log)");
     int basic_ok = bionic_basic_selftest() == 0;
     fprintf(log, "Basic ABI bindings=%zu selftest=%s\n", bionic_basic_count(), basic_ok ? "PASS" : "FAIL");
     batch_record("basic_abi", basic_ok, log);
     int tls_init_ok = batch_run("tls_initialize", android_tls_initialize, 1, log);
     int threads_ok = batch_run("thread_sync", bionic_threads_selftest, tls_init_ok, log);
-    printf("Thread/sync bridge: %s\n", threads_ok ? "PASS" : "FAIL (see log)");
     int detached_ok = batch_run("detached_threads", guest_detached_selftest, threads_ok, log);
     Result rfs = romfsInit();
     ModuleSet set = {0};
@@ -137,23 +155,23 @@ int main(int argc, char **argv) {
     if (R_FAILED(rfs)) {
         fprintf(log, "romfsInit=%08x\n", rfs); failed = 1;
     }
-    int io_ok = batch_run("file_io", runtime_io_selftest, R_SUCCEEDED(rfs), log);
+    boot_progress(1);
+    int cache_ok=batch_run("metadata_cache",runtime_io_prepare,R_SUCCEEDED(rfs),log);
+    int io_ok = batch_run("file_io", runtime_io_selftest, cache_ok, log);
     int zlib_ok = batch_run("decompression", runtime_zlib_selftest, 1, log);
     int data_memory_ok = batch_run("data_memory", guest_memory_selftest, io_ok, log);
     int text_ok = batch_run("utf8_text", guest_text_selftest, 1, log);
     int system_ok = batch_run("system_calendar", guest_system_selftest, 1, log);
     int events_ok = batch_run("android_events", android_events_selftest, 1, log);
     int controls_ok = batch_run("controls_matrix", swag_controls_selftest, 1, log);
-    printf("File bridge: %s; decompression: %s\n", io_ok ? "PASS" : "FAIL", zlib_ok ? "PASS" : "FAIL");
+    boot_progress(2);
     int tls_ok = 0;
     if (!failed) {
         int fixture_ok = batch_run("loader_fixture", fixture_batch, memory_ok, log);
-        printf("ELF fixture: %s\n", fixture_ok ? "PASS" : "FAIL");
         if (!fixture_ok || !basic_ok || !threads_ok) failed = 1;
         if (!failed) {
             tls_ok = android_tls_selftest(log, memory_ok) == 0;
             batch_record("tls_execution", tls_ok, log);
-            printf("Android TLS bridge: %s\n", tls_ok ? "PASS" : "FAIL (see log)");
             if (!tls_ok) failed = 1;
         }
     }
@@ -167,16 +185,15 @@ int main(int argc, char **argv) {
         debug_sizes[i]=set.modules[i].size; debug_bases[i]=set.modules[i].bias;
         crash_trace_module(i,debug_bases[i],debug_sizes[i]);
         ++set.count;
-        printf("Loaded %s (%zu KiB)\n", names[i], size / 1024);
+        boot_progress(3+(unsigned)i);
         consoleUpdate(NULL);
     }
+    boot_progress(6);
     int bootstrap_ok = 0, jni_profile_ok = 0, bootstrap_attempted = 0;
     for (size_t i = 0; i < set.count; ++i) {
         int linked = elf_relocate(&set.modules[i], resolve_module, &set, log) == 0;
         int patched = android_tls_apply(&set.modules[i], memory[i].size, &plans[i], log) == 0;
         if (!patched) { fprintf(log, "TLS_GAME_PATCH_FAIL %s\n", names[i]); failed = 1; }
-        printf("%s: %zu imports unresolved; %zu unsupported relocations\n", names[i],
-                set.modules[i].unresolved, set.modules[i].unsupported);
         fprintf(log, "%s link=%s JNI_OnLoad=%p\n", names[i], linked ? "OK" : "BLOCKED",
                 (void *)elf_export(&set.modules[i], "JNI_OnLoad"));
         int ready = 0;
@@ -196,6 +213,7 @@ int main(int argc, char **argv) {
      * return invented values. A trap-filled image is not a completed port. */
     if (!failed && set.count==3 && memory_ok && threads_ok && tls_ok && io_ok && system_ok && jni_profile_ok) {
         fprintf(log,"ENGINE_START_ATTEMPT diagnostic_traps=1 game_running=0\n"); fflush(log);
+        fprintf(log,"STARTUP_TIMING before_engine_ms=%llu\n",(unsigned long long)(armTicksToNs(armGetSystemTick()-boot_tick)/1000000));
         startup_engine_progress();
         for(size_t i=0;i<3;++i) {
             if(!set.modules[i].published && nx_memory_publish(&memory[i],&set.modules[i],log)) svcExitProcess();
@@ -206,6 +224,7 @@ int main(int argc, char **argv) {
             if(elf_run_initializers(&set.modules[i],log)) svcExitProcess();
             startup_engine_progress();
         }
+        boot_progress(7);
         void *vm,*env; unity_host_get_vm(&vm,&env); (void)env;
         if(gc_bridge_bind(&set.modules[1],log)) { fprintf(log,"GC_BRIDGE_BIND_FAILED\n"); fflush(log); svcExitProcess(); }
         fprintf(log,"ENGINE_UNITY_ONLOAD_BEGIN\n"); fflush(log);
@@ -213,6 +232,7 @@ int main(int argc, char **argv) {
         fprintf(log,"ENGINE_UNITY_ONLOAD_END version=%x\n",version); fflush(log);
         startup_engine_progress();
         if(version==0x10006) {
+            boot_progress(8);
             consoleExit(NULL);
             unity_host_set_il2cpp(&set.modules[1]);
             int lifecycle=unity_host_run(log);

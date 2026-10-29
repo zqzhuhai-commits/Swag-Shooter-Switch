@@ -1,0 +1,17 @@
+{
+  "version": "0.14.24",
+  "artifact": "swag-switch-stage14.24-input-performance.nro",
+  "bytes": 450742165,
+  "sha256": "46f878f485fb8fafb9ce2c527fc6ddcec26985bac6cb0200fafa4490cb557d12",
+  "local_build": "PASS",
+  "embedded_files_verified": 1863,
+  "new_runtime_hardware_validation": "PENDING",
+  "prior_intro_and_menu": "CONFIRMED_BY_USER",
+  "prior_input": "unresponsive, user confirmed",
+  "new_input": "immutable JNI snapshots, lifetime refs, cross-thread access, multitouch",
+  "new_runtime_tests": "PENDING_ON_DEVICE",
+  "startup_policy": "fast default; optional full test flag",
+  "performance_measurement": "PENDING_ON_DEVICE",
+  "controller_combat_mapping": "INCOMPLETE",
+  "playability_confirmed": false
+}

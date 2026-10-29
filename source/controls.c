@@ -5,7 +5,7 @@ enum { JUMP=1, CROUCH=2, PRONE=4, RELOAD=8, MAP=16, PRIMARY=32,
     CURSOR=4096, CONFIRM=8192, CANCEL=16384 };
 uint64_t swag_controls_update(SwagControls *s, uint64_t held) {
     uint64_t down = held & ~s->previous, up = s->previous & ~held, actions = 0;
-    uint64_t combo = HidNpadButton_L | HidNpadButton_R | HidNpadButton_Down;
+    uint64_t combo = HidNpadButton_L | HidNpadButton_R;
     int chord = (held & combo) == combo;
     if (chord) {
         s->cancel_grenade = s->cancel_item = 1;
@@ -43,28 +43,28 @@ int swag_controls_selftest(FILE *log) {
     errors += swag_controls_update(&s,0) != 0;
     /* Exercise every press/release ordering of the three-button chord.
      * None may leak a grenade or item-cycle action on release. */
-    static const unsigned orders[6][3] = {{0,1,2},{0,2,1},{1,0,2},{1,2,0},{2,0,1},{2,1,0}};
-    const uint64_t parts[3] = {HidNpadButton_L,HidNpadButton_R,HidNpadButton_Down};
+    static const unsigned orders[2][2] = {{0,1},{1,0}};
+    const uint64_t parts[2] = {HidNpadButton_L,HidNpadButton_R};
     unsigned scenarios = 0;
-    for (unsigned press=0; press<6; ++press) for (unsigned release=0; release<6; ++release) {
+    for (unsigned press=0; press<2; ++press) for (unsigned release=0; release<2; ++release) {
         SwagControls state = {0}; uint64_t held = 0;
-        for (unsigned j=0; j<3; ++j) {
+        for (unsigned j=0; j<2; ++j) {
             held |= parts[orders[press][j]];
-            errors += swag_controls_update(&state,held) != (j==2 ? CURSOR : 0);
+            errors += swag_controls_update(&state,held) != (j==1 ? CURSOR : 0);
         }
         errors += swag_controls_update(&state,held|HidNpadButton_A|HidNpadButton_ZR) != CONFIRM;
         swag_controls_update(&state,held);
-        for (unsigned j=0; j<3; ++j) {
+        for (unsigned j=0; j<2; ++j) {
             held &= ~parts[orders[release][j]];
             errors += swag_controls_update(&state,held) != 0;
         }
         errors += !state.cursor;
         /* Repeat the same ordering while leaving cursor mode. */
-        for (unsigned j=0; j<3; ++j) {
+        for (unsigned j=0; j<2; ++j) {
             held |= parts[orders[press][j]];
-            errors += swag_controls_update(&state,held) != (j==2 ? CURSOR : 0);
+            errors += swag_controls_update(&state,held) != (j==1 ? CURSOR : 0);
         }
-        for (unsigned j=0; j<3; ++j) {
+        for (unsigned j=0; j<2; ++j) {
             held &= ~parts[orders[release][j]];
             errors += swag_controls_update(&state,held) != 0;
         }
@@ -85,8 +85,8 @@ int swag_controls_selftest(FILE *log) {
     errors += swag_controls_update(&s,0) != GRENADE;
     errors += swag_controls_update(&s,HidNpadButton_Down) != 0;
     errors += swag_controls_update(&s,0) != ITEM;
-    uint64_t combo = HidNpadButton_L|HidNpadButton_R|HidNpadButton_Down;
-    swag_controls_update(&s,HidNpadButton_L|HidNpadButton_R);
+    uint64_t combo = HidNpadButton_L|HidNpadButton_R;
+    swag_controls_update(&s,HidNpadButton_L);
     errors += swag_controls_update(&s,combo) != CURSOR || !s.cursor;
     errors += swag_controls_update(&s,combo) != 0;
     errors += swag_controls_update(&s,0) != 0;
