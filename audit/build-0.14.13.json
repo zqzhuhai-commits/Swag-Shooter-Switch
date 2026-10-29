@@ -1,0 +1,14 @@
+{
+  "version": "0.14.13",
+  "artifact": "swag-switch-stage14.13-readlink.nro",
+  "bytes": 450713493,
+  "sha256": "1bcfc4497340587008f77d3578a479923faaef8ca91299110e91c2454974d20f",
+  "local_build": "PASS",
+  "embedded_files_verified": 1863,
+  "runtime_hardware_validation": "PENDING",
+  "game_screen_confirmed": false,
+  "previous_device_version": "0.14.12",
+  "previous_metadata_shared_errors": 0,
+  "previous_stop": "called_missing_api=readlink",
+  "previous_native_fault": false
+}

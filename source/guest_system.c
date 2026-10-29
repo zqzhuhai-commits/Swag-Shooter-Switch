@@ -13,6 +13,7 @@
 #include <errno.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
+#include <netdb.h>
 #include <wchar.h>
 #include <pthread.h>
 #include <poll.h>
@@ -467,6 +468,100 @@ static int sockaddr_selftest(FILE *log) {
     }
     fprintf(log,"SOCKADDR_TEST_DONE errors=%d ipv4_ipv6_layout=CHECKED network_io=NOT_TESTED\n",errors); return errors;
 }
+/* Bionic LP64 netdb.h: canonname precedes addr (unlike many libc ABIs).
+ * https://github.com/aosp-mirror/platform_bionic/blob/master/libc/include/netdb.h */
+typedef struct GuestAddrinfo {
+    int flags,family,type,protocol; unsigned length;
+    char *canonical; void *address; struct GuestAddrinfo *next;
+} GuestAddrinfo;
+_Static_assert(sizeof(GuestAddrinfo)==48 && offsetof(GuestAddrinfo,canonical)==24 && offsetof(GuestAddrinfo,address)==32,"Bionic addrinfo ABI");
+static void guest_freeaddrinfo(GuestAddrinfo *p) {
+    while(p) { GuestAddrinfo *next=p->next; free(p->canonical); free(p->address); free(p); p=next; }
+}
+/* Numeric addresses do not require Horizon's DNS resolver (whose IPv6
+ * implementation can differ from its IPv4 DNS support). */
+static int numeric_addrinfo(const char *node,const char *service,const GuestAddrinfo *h,GuestAddrinfo **out) {
+    if(h && (h->flags&0x400)) return -1; /* AI_ADDRCONFIG needs actual interface state. */
+    if(!node || !service || !*service) return -1; /* delegate named/wildcard services */
+    unsigned port=0;
+    for(const char *p=service;*p;++p) {
+        if(*p<'0' || *p>'9') return -1;
+        port=port*10+(*p-'0'); if(port>65535) return 9;
+    }
+    unsigned char bytes[28]={0},ip[16];
+    int family=0;
+    if(guest_inet_pton(2,node,ip)==1) family=2;
+    else if(guest_inet_pton(10,node,ip)==1) family=10;
+    else return -1;
+    if(h && h->family && h->family!=family) return -1;
+    int type=h ? h->type : 0,protocol=h ? h->protocol : 0;
+    if(type && type!=SOCK_STREAM && type!=SOCK_DGRAM) return 10;
+    if(protocol && protocol!=IPPROTO_TCP && protocol!=IPPROTO_UDP) return 13;
+    if((type==SOCK_STREAM && protocol==IPPROTO_UDP) || (type==SOCK_DGRAM && protocol==IPPROTO_TCP)) return 9;
+    if(!type && protocol) type=protocol==IPPROTO_TCP ? SOCK_STREAM : SOCK_DGRAM;
+    uint16_t guest_family=family; memcpy(bytes,&guest_family,2);
+    bytes[2]=port>>8; bytes[3]=port&255;
+    memcpy(bytes+(family==2 ? 4 : 8),ip,family==2 ? 4 : 16);
+    GuestAddrinfo **tail=out;
+    for(int candidate=SOCK_STREAM;candidate<=SOCK_DGRAM;++candidate) {
+        if(type && candidate!=type) continue;
+        GuestAddrinfo *g=calloc(1,sizeof *g);
+        if(!g) { guest_freeaddrinfo(*out); *out=NULL; return 6; }
+        g->length=family==2 ? 16 : 28; g->address=malloc(g->length);
+        if(h && (h->flags&2) && !*out) g->canonical=strdup(node);
+        if(!g->address || (h && (h->flags&2) && !*out && !g->canonical)) { guest_freeaddrinfo(g); guest_freeaddrinfo(*out); *out=NULL; return 6; }
+        memcpy(g->address,bytes,g->length);
+        g->family=family; g->type=candidate; g->protocol=candidate==SOCK_STREAM ? IPPROTO_TCP : IPPROTO_UDP; g->flags=h ? h->flags : 0;
+        *tail=g; tail=&g->next;
+    }
+    return 0;
+}
+static int guest_getaddrinfo(const char *node,const char *service,const GuestAddrinfo *hints,GuestAddrinfo **out) {
+    if(!out) return 12;
+    *out=NULL;
+    if(hints) {
+        if(hints->flags & ~(15|0x100|0x400|0x800)) return 3;
+        if(hints->family && hints->family!=2 && hints->family!=10) return 5;
+    }
+    int numeric=numeric_addrinfo(node,service,hints,out);
+    if(numeric>=0) return numeric;
+    /* Single-player offline policy: satisfy the ABI without starting DNS
+     * or waiting for network services. Never invent a successful address. */
+    *bionic_errno_ptr()=100; /* Android ENETDOWN */
+    return 2; /* Android EAI_AGAIN */
+}
+static const char *guest_gai_strerror(int e) {
+    static const char *messages[]={"Success","Address family unsupported","Temporary resolution failure","Invalid flags","Resolution failure","Unsupported family","Out of memory","No address","Name not known","Service unsupported","Socket type unsupported","System error","Invalid hints","Unknown protocol","Overflow"};
+    return e>=0 && e<15 ? messages[e] : "Unknown resolver error";
+}
+static int resolver_selftest(FILE *log) {
+    int errors=0; GuestAddrinfo h={.family=2,.type=SOCK_STREAM,.flags=4|8},*p=NULL;
+    int rc=guest_getaddrinfo("127.0.0.1","443",&h,&p);
+    fprintf(log,"RESOLVER_CASE family=2 result=%d present=%d\n",rc,p!=NULL);
+    if(rc || !p) ++errors;
+    else {
+        unsigned char expected[4]={127,0,0,1};
+        int mismatch=p->family!=2 || p->length!=16 || memcmp((char *)p->address+4,expected,4) || memcmp((char *)p->address+2,"\x01\xbb",2);
+        errors+=mismatch; fprintf(log,"RESOLVER_CASE ipv4_layout_errors=%d\n",mismatch);
+    }
+    guest_freeaddrinfo(p); p=NULL;
+    h.family=10; rc=guest_getaddrinfo("::1","80",&h,&p);
+    fprintf(log,"RESOLVER_CASE family=10 result=%d present=%d\n",rc,p!=NULL);
+    errors+=rc!=0 || !p;
+    if(p) errors+=p->family!=10 || p->length!=28 || ((unsigned char *)p->address)[23]!=1;
+    guest_freeaddrinfo(p); p=NULL;
+    h.family=2; h.flags=4|8|2; h.type=0;
+    rc=guest_getaddrinfo("127.0.0.1","0",&h,&p);
+    errors+=rc!=0 || !p;
+    if(p) errors+=!p->canonical || strcmp(p->canonical,"127.0.0.1") || p->type!=SOCK_STREAM || !p->next || p->next->type!=SOCK_DGRAM;
+    guest_freeaddrinfo(p); p=NULL;
+    h.type=SOCK_STREAM; errors+=guest_getaddrinfo("127.0.0.1","70000",&h,&p)!=9 || p!=NULL;
+    h.family=123; errors+=guest_getaddrinfo("127.0.0.1","80",&h,&p)!=5 || p!=NULL;
+    h.family=2; h.flags=0x80000000; errors+=guest_getaddrinfo("127.0.0.1","80",&h,&p)!=3 || p!=NULL;
+    h.flags=0; errors+=guest_getaddrinfo("offline.invalid","443",&h,&p)!=2 || p!=NULL;
+    fprintf(log,"RESOLVER_TEST errors=%d numeric_ipv4_ipv6=CHECKED port_layout=CHECKED errors_and_free=CHECKED internet_dns=NOT_TESTED\n",errors);
+    return errors;
+}
 typedef struct { int32_t fd; int16_t events,revents; } GuestPollFd;
 _Static_assert(sizeof(GuestPollFd)==8 && sizeof(struct pollfd)==8,"pollfd layout");
 static int guest_poll(GuestPollFd *fds,unsigned count,int timeout) {
@@ -667,6 +762,7 @@ static const SystemBinding bindings[] = {
     SYS_BIND("sigemptyset", guest_sigempty), SYS_BIND("sigfillset", guest_sigfill), SYS_BIND("sigaddset", guest_sigadd),
     SYS_BIND("sigdelset", guest_sigdel), SYS_BIND("sigismember", guest_sigmember),
     SYS_BIND("inet_pton", guest_inet_pton), SYS_BIND("inet_ntop", guest_inet_ntop), SYS_BIND("inet_addr", inet_addr),
+    SYS_BIND("getaddrinfo",guest_getaddrinfo), SYS_BIND("freeaddrinfo",guest_freeaddrinfo), SYS_BIND("gai_strerror",guest_gai_strerror),
     SYS_BIND("getuid", guest_uid), SYS_BIND("geteuid", guest_uid), SYS_BIND("gethostname", guest_hostname), SYS_BIND("uname", guest_uname),
     SYS_BIND("__FD_SET_chk", checked_fd_set), SYS_BIND("__FD_ISSET_chk", checked_fd_isset), SYS_BIND("basename", guest_basename),
     SYS_BIND("__android_log_print", android_print), SYS_BIND("__android_log_vprint", android_vprint),
@@ -689,7 +785,9 @@ uintptr_t guest_system_resolve(const char *name) {
     return 0;
 }
 int guest_system_selftest(FILE *log) {
+    int resolver_errors=resolver_selftest(log);
     int errors = profile_selftest(log) + network_text_selftest(log) + signal_set_selftest(log) + user_profile_selftest(log) + syslog_selftest(log) + sockaddr_selftest(log) + poll_selftest(log) + sigaction_selftest(log) + jump_context_selftest(log) + prctl_selftest(log) + signal_stack_selftest(log) + syscall_selftest(log) + guest_futex_selftest(log); char value[92], name[32];
+    errors += resolver_errors;
     errors += property_get("ro.build.version.sdk", value) != 2 || strcmp(value, "30");
     const Property *p = property_find("ro.product.model");
     errors += !p || property_read(p, name, value) <= 0 || strcmp(name, "ro.product.model");

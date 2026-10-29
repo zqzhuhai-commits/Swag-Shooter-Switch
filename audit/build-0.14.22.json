@@ -1,0 +1,14 @@
+{
+  "version": "0.14.22",
+  "artifact": "swag-switch-stage14.22-egl-size.nro",
+  "bytes": 450725781,
+  "sha256": "2f038f19798b9d5fb831276560583ceeb77b24cf556458dcf1d049f644b09b9c",
+  "local_build": "PASS",
+  "embedded_files_verified": 1863,
+  "runtime_hardware_validation": "PENDING",
+  "game_screen_confirmed": false,
+  "previous_device_version": "0.14.21",
+  "previous_window_query": {"width":0,"height":0,"query_ok":true},
+  "previous_render_frames_observed": 720,
+  "previous_graphics_error": "RenderTexture.Create width and height must be larger than 0"
+}

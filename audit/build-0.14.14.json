@@ -1,0 +1,13 @@
+{
+  "version": "0.14.14",
+  "artifact": "swag-switch-stage14.14-readlink-stat.nro",
+  "bytes": 450713493,
+  "sha256": "cfb72d79264483aa072d9c6de3a337ac2bfa7dbd541e94bbc8c7d65ce059b1c6",
+  "local_build": "PASS",
+  "embedded_files_verified": 1863,
+  "runtime_hardware_validation": "PENDING",
+  "game_screen_confirmed": false,
+  "previous_device_version": "0.14.13",
+  "previous_stop": "file_io errors=1; bootstrap dependency skipped",
+  "previous_native_fault": false
+}

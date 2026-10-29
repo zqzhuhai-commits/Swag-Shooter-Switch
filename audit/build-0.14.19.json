@@ -1,0 +1,15 @@
+{
+  "version": "0.14.19",
+  "artifact": "swag-switch-stage14.19-jni-clock.nro",
+  "bytes": 450725781,
+  "sha256": "bec21ddd7619b1e852309d315f500c9ca0c0bc4e4b0fbf0f44829ffcb660b371",
+  "local_build": "PASS",
+  "embedded_files_verified": 1863,
+  "runtime_hardware_validation": "PENDING",
+  "game_screen_confirmed": false,
+  "previous_device_version": "0.14.18",
+  "previous_looper_attach": "PASS",
+  "previous_message_and_frame_delivery": "OBSERVED",
+  "previous_stop": "JNI_UNSUPPORTED slot=133 after System.nanoTime lookup",
+  "remaining_managed_exceptions": ["Path is empty", "NullReferenceException in Google result callback"]
+}

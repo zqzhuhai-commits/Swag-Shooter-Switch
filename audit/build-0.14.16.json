@@ -1,0 +1,15 @@
+{
+  "version": "0.14.16",
+  "artifact": "swag-switch-stage14.16-dns-random.nro",
+  "bytes": 450721685,
+  "sha256": "f4f0bee64333609bef492e3b3ec913236c1607126a4d64840e8b4b17a17301a3",
+  "local_build": "PASS",
+  "embedded_files_verified": 1863,
+  "runtime_hardware_validation": "PENDING",
+  "game_screen_confirmed": false,
+  "previous_device_version": "0.14.15",
+  "previous_screen": "black, user confirmed",
+  "previous_stop": "called_missing_api=getaddrinfo",
+  "previous_managed_error": "CryptographicException: Couldn't access random source",
+  "previous_native_fault": false
+}

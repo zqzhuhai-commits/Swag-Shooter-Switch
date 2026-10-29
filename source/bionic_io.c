@@ -24,6 +24,20 @@ static AndroidFile standards[3];
 static FILE *standard_native[3], *game_log;
 static Stream *streams;
 static Mutex io_lock;
+static unsigned next_alias=0x10000;
+static Mutex random_lock;
+static int random_initialized;
+static Result random_ready(void) {
+    mutexLock(&random_lock);
+    Result rc=0;
+    if(!random_initialized) { rc=csrngInitialize(); if(R_SUCCEEDED(rc)) random_initialized=1; }
+    mutexUnlock(&random_lock); return rc;
+}
+static char executable_path[1024];
+void runtime_io_set_executable_path(const char *path) {
+    executable_path[0]=0;
+    if(path && strlen(path)<sizeof executable_path) strcpy(executable_path,path);
+}
 static int fail(int e) { *bionic_errno_ptr() = bionic_error(e); return -1; }
 int runtime_io_native_fd(int fd) {
     int result=fd; mutexLock(&io_lock);
@@ -32,7 +46,6 @@ int runtime_io_native_fd(int fd) {
 }
 static int b_dup(int fd) {
     FdPath *copy=malloc(sizeof *copy); if(!copy) return fail(ENOMEM);
-    static unsigned next_alias=0x10000;
     mutexLock(&io_lock); FdPath *original=fd_paths;
     while(original && original->fd!=fd) original=original->next;
     if(!original) { mutexUnlock(&io_lock); free(copy); return fail(EBADF); }
@@ -231,6 +244,16 @@ static int open_flags(int android, int *native) {
 }
 static int b_open(const char *path, int options, ...) {
     char real[1024]; int native;
+    if(path && (!strcmp(path,"/dev/urandom") || !strcmp(path,"/dev/random"))) {
+        if(options & ~(0x800|0x80000)) return fail(EINVAL);
+        Result rc=random_ready();
+        if(R_FAILED(rc)) { fprintf(game_log,"IO_RANDOM_INIT_FAIL result=%x\n",rc); return fail(EIO); }
+        FdPath *record=calloc(1,sizeof *record); if(!record) return fail(ENOMEM);
+        record->native_fd=-2; record->readable=1; strcpy(record->path,path);
+        mutexLock(&io_lock); record->fd=next_alias++; record->next=fd_paths; fd_paths=record; mutexUnlock(&io_lock);
+        fprintf(game_log,"IO_RANDOM_OPEN fd=%d path=%s source=csrng\n",record->fd,path);
+        return record->fd;
+    }
     if (open_flags(options, &native) || map_path(path, (options & 3) != 0 || (options & 0x240), real)) return -1;
     fprintf(game_log,"IO_OPEN_TRANSLATED path=%s flags=%x native_flags=%x\n",real,options,native);
     unsigned mode = 0666;
@@ -244,7 +267,18 @@ static int b_open(const char *path, int options, ...) {
     mutexLock(&io_lock); record->next = fd_paths; fd_paths = record; mutexUnlock(&io_lock);
     return fd;
 }
-static ssize_t b_read(int fd, void *out, size_t n) { ssize_t r = read(runtime_io_native_fd(fd), out, n); return r < 0 ? fail(errno) : r; }
+static ssize_t b_read(int fd, void *out, size_t n) {
+    int native=runtime_io_native_fd(fd);
+    if(native==-2) {
+        if(n>(size_t)SSIZE_MAX) return fail(EINVAL);
+        if(!n) return 0;
+        if(!out) return fail(EFAULT);
+        Result rc=csrngGetRandomBytes(out,n);
+        if(R_FAILED(rc)) { fprintf(game_log,"IO_RANDOM_READ_FAIL result=%x bytes=%zu\n",rc,n); return fail(EIO); }
+        return n;
+    }
+    ssize_t r=read(native,out,n); return r<0 ? fail(errno) : r;
+}
 static ssize_t b_write(int fd, const void *data, size_t n) {
     if (fd == 1 || fd == 2) return fwrite(data, 1, n, game_log);
     ssize_t r = write(runtime_io_native_fd(fd), data, n); if(r<0) { int e=errno; fprintf(game_log,"IO_WRITE_FAIL fd=%d bytes=%zu errno=%d\n",fd,n,e); return fail(e); } return r;
@@ -258,7 +292,7 @@ static int b_close(int fd) {
         FdPath *old=*link; native=old->native_fd; *link=old->next; free(old);
         for(FdPath *p=fd_paths;p;p=p->next) if(p->native_fd==native) { remaining=1; break; }
     } else if(fd>=0x10000) { mutexUnlock(&io_lock); return fail(EBADF); }
-    int rc=remaining ? 0 : close(native), saved=errno;
+    int rc=(remaining || native==-2) ? 0 : close(native), saved=errno;
     mutexUnlock(&io_lock);
     fprintf(game_log,"IO_CLOSE fd=%d native=%d result=%d retained=%d\n",fd,native,rc,remaining);
     return rc ? fail(saved) : 0;
@@ -281,7 +315,7 @@ int64_t runtime_io_read_at(int fd, void *buffer, size_t size, int64_t offset) {
     size_t n = fread(buffer, 1, size, file); int e = ferror(file) ? errno : 0;
     fclose(file); if (e) { errno = e; return -1; } return n;
 }
-static int64_t b_lseek(int fd, int64_t off, int origin) { off_t r = lseek(runtime_io_native_fd(fd), off, origin); return r < 0 ? fail(errno) : r; }
+static int64_t b_lseek(int fd, int64_t off, int origin) { int native=runtime_io_native_fd(fd); if(native==-2) return fail(ESPIPE); off_t r = lseek(native, off, origin); return r < 0 ? fail(errno) : r; }
 static int b_ftruncate(int fd, int64_t n) { return ftruncate(runtime_io_native_fd(fd), n) ? fail(errno) : 0; }
 static int b_truncate(const char *path,int64_t length) {
     if (length<0) { *bionic_errno_ptr()=22; return -1; }
@@ -396,7 +430,11 @@ static int b_lstat(const char *path, AndroidStat *out) {
     if (map_path(path, 0, real)) return -1;
     return lstat(real, &s) ? fail(errno) : convert_stat(&s, out);
 }
-static int b_fstat(int fd, AndroidStat *out) { struct stat s; return fstat(runtime_io_native_fd(fd), &s) ? fail(errno) : convert_stat(&s, out); }
+static int b_fstat(int fd, AndroidStat *out) {
+    int native=runtime_io_native_fd(fd); struct stat s;
+    if(native==-2) { memset(&s,0,sizeof s); s.st_mode=S_IFCHR|0444; s.st_nlink=1; s.st_blksize=4096; return convert_stat(&s,out); }
+    return fstat(native,&s) ? fail(errno) : convert_stat(&s,out);
+}
 static void *b_opendir(const char *path) {
     char real[1024]; if (map_path(path, 0, real)) return NULL;
     DIR *d = opendir(real); if (!d) { fail(errno); return NULL; }
@@ -441,6 +479,43 @@ static char *b_realpath(const char *path, char *out) {
     if (!out) { out = malloc(strlen(virtual_path) + 1); if (!out) { fail(ENOMEM); return NULL; } }
     strcpy(out, virtual_path); return out;
 }
+static ssize_t b_readlink(const char *path,char *buffer,size_t size) {
+    if(!path || !buffer) return fail(EFAULT);
+    if(!size || size>(size_t)SSIZE_MAX) return fail(EINVAL);
+    char target[1024]={0};
+    if(!strcmp(path,"/proc/self/exe")) {
+        if(!*executable_path) return fail(ENOENT);
+        strcpy(target,executable_path);
+    } else if(!strncmp(path,"/proc/self/fd/",14)) {
+        const char *number=path+14; unsigned long descriptor=0;
+        if(!*number) return fail(ENOENT);
+        for(const char *p=number;*p;++p) {
+            if(*p<'0' || *p>'9' || descriptor>((unsigned long)INT_MAX-(*p-'0'))/10) return fail(ENOENT);
+            descriptor=descriptor*10+(*p-'0');
+        }
+        mutexLock(&io_lock);
+        for(FdPath *p=fd_paths;p;p=p->next) if(p->fd==(int)descriptor) { strcpy(target,p->path); break; }
+        mutexUnlock(&io_lock);
+        if(!*target) return fail(ENOENT);
+        const char *prefix=NULL,*tail=NULL;
+        if(!strncmp(target,"romfs:/game/",12)) { prefix="/roms/ports/swag/"; tail=target+12; }
+        else if(!strncmp(target,"sdmc:/switch/swag-userdata/",27)) { prefix="/sdcard/"; tail=target+27; }
+        if(prefix) {
+            char translated[1024];
+            if(strlen(prefix)+strlen(tail)>=sizeof translated) return fail(ENAMETOOLONG);
+            strcpy(translated,prefix); strcat(translated,tail); strcpy(target,translated);
+        }
+    } else {
+        char real[1024]; struct stat status;
+        if(map_path(path,0,real)) return -1;
+        if(stat_guest_path(real,&status)) return fail(errno);
+        return fail(EINVAL); /* Mounted Horizon files are not symbolic links. */
+    }
+    size_t count=strlen(target); if(count>size) count=size;
+    memcpy(buffer,target,count); /* POSIX readlink never appends a terminator. */
+    if(game_log) { fprintf(game_log,"IO_READLINK path=%s target=%s returned=%zu truncated=%d\n",path,target,count,count<strlen(target)); fflush(game_log); }
+    return count;
+}
 typedef struct { const char *name; uintptr_t address; } IoBinding;
 #define IO_BIND(name, fn) {name, (uintptr_t)(fn)}
 static const IoBinding bindings[] = {
@@ -461,7 +536,7 @@ static const IoBinding bindings[] = {
     IO_BIND("unlink", b_unlink), IO_BIND("remove", b_unlink), IO_BIND("rmdir", b_rmdir), IO_BIND("rename", b_rename),
     IO_BIND("stat", b_stat), IO_BIND("stat64", b_stat), IO_BIND("lstat", b_lstat), IO_BIND("fstat", b_fstat),
     IO_BIND("opendir", b_opendir), IO_BIND("readdir", b_readdir), IO_BIND("closedir", b_closedir),
-    IO_BIND("getcwd", b_getcwd), IO_BIND("realpath", b_realpath)
+    IO_BIND("getcwd", b_getcwd), IO_BIND("realpath", b_realpath), IO_BIND("readlink", b_readlink)
 };
 uintptr_t runtime_io_resolve(const char *name) {
     for (size_t i = 0; i < sizeof bindings / sizeof *bindings; ++i)
@@ -524,6 +599,28 @@ static int prepare_metadata_cache(FILE *log) {
 }
 int runtime_io_selftest(FILE *log) {
     int errors = prepare_metadata_cache(log)!=0;
+    int random_errors=0,random_fd=b_open("/dev/urandom",0);
+    if(random_fd<0) ++random_errors;
+    else {
+        unsigned char a[32]={0},b[32]={0}; AndroidStat status;
+        random_errors+=b_read(random_fd,a,sizeof a)!=(ssize_t)sizeof a;
+        random_errors+=b_fstat(random_fd,&status)!=0 || (status.mode&S_IFMT)!=S_IFCHR;
+        random_errors+=b_lseek(random_fd,0,SEEK_SET)!=-1 || *bionic_errno_ptr()!=29;
+        int alias=b_dup(random_fd); random_errors+=alias<0;
+        random_errors+=b_close(random_fd)!=0;
+        if(alias>=0) {
+            random_errors+=b_read(alias,b,sizeof b)!=(ssize_t)sizeof b;
+            random_errors+=!memcmp(a,b,sizeof a);
+            random_errors+=b_read(alias,NULL,0)!=0;
+            random_errors+=b_close(alias)!=0;
+            random_errors+=b_read(alias,b,1)!=-1 || *bionic_errno_ptr()!=9;
+        }
+    }
+    random_fd=b_open("/dev/random",0);
+    if(random_fd<0) ++random_errors;
+    else { unsigned char sample[8]; random_errors+=b_read(random_fd,sample,sizeof sample)!=(ssize_t)sizeof sample; random_errors+=b_close(random_fd)!=0; }
+    errors+=random_errors;
+    fprintf(log,"RANDOM_DEVICE_TEST errors=%d source=csrng read_dup_close=CHECKED char_stat=CHECKED seek=ESPIPE quality_certification=NOT_CLAIMED\n",random_errors);
     const char *assets[]={"assets/bin/Data/globalgamemanagers","bin/Data/globalgamemanagers.assets","assets/bin/Data/level0","bin/Data/Managed/Metadata/global-metadata.dat"};
     for (unsigned i=0;i<sizeof assets/sizeof *assets;++i) {
         void *asset=b_fopen(assets[i],"rb"); unsigned char bytes[4]={0};
@@ -548,6 +645,20 @@ int runtime_io_selftest(FILE *log) {
     int alias=b_dup(fd);
     errors+=alias<0;
     if(alias>=0) {
+        char link_path[64],link_target[1024],expected[1024];
+        snprintf(link_path,sizeof link_path,"/proc/self/fd/%d",alias);
+        snprintf(expected,sizeof expected,"/sdcard/%s",path+9);
+        memset(link_target,0x5a,sizeof link_target);
+        ssize_t link_size=b_readlink(link_path,link_target,sizeof link_target);
+        errors+=link_size!=(ssize_t)strlen(expected) || memcmp(link_target,expected,strlen(expected)) || link_target[strlen(expected)]!=0x5a;
+        memset(link_target,0x5a,sizeof link_target);
+        errors+=b_readlink(link_path,link_target,3)!=3 || memcmp(link_target,expected,3) || link_target[3]!=0x5a;
+        errors+=b_readlink(link_path,link_target,0)!=-1 || *bionic_errno_ptr()!=22;
+        errors+=b_readlink("/proc/self/fd/not-a-number",link_target,sizeof link_target)!=-1 || *bionic_errno_ptr()!=2;
+        ssize_t ordinary_result=b_readlink(path,link_target,sizeof link_target);
+        int ordinary_errno=*bionic_errno_ptr();
+        errors+=ordinary_result!=-1 || ordinary_errno!=22;
+        fprintf(log,"IO_READLINK_REGULAR_OPEN result=%lld guest_errno=%d expected_errno=22\n",(long long)ordinary_result,ordinary_errno);
         errors+=b_lseek(alias,0,SEEK_SET)!=0;
         errors+=b_read(alias,text,1)!=1 || text[0]!='1';
         errors+=b_read(fd,text,1)!=1 || text[0]!='2';
@@ -555,6 +666,22 @@ int runtime_io_selftest(FILE *log) {
     errors += b_close(fd) != 0;
     if(alias>=0) { errors+=b_read(alias,text,1)!=1 || text[0]!='3'; errors+=b_close(alias)!=0; }
     fprintf(log,"IO_DUP_TEST cumulative_errors=%d shared_offset_and_close=CHECKED\n",errors);
+    fprintf(log,"IO_READLINK_TEST cumulative_errors=%d descriptor_path=CHECKED truncation_no_nul=CHECKED regular_file=EINVAL exe_path=%s\n",errors,*executable_path ? executable_path : "UNAVAILABLE");
+    {
+        int link_errors=0; char target[1024];
+        ssize_t ordinary_result=b_readlink(path,target,sizeof target);
+        link_errors+=ordinary_result!=-1 || *bionic_errno_ptr()!=22;
+        link_errors+=b_readlink("userdata/.missing-readlink-target",target,sizeof target)!=-1 || *bionic_errno_ptr()!=2;
+        char closed_fd_path[64]; snprintf(closed_fd_path,sizeof closed_fd_path,"/proc/self/fd/%d",fd);
+        link_errors+=b_readlink(closed_fd_path,target,sizeof target)!=-1 || *bionic_errno_ptr()!=2;
+        if(*executable_path) {
+            memset(target,0x5a,sizeof target);
+            ssize_t n=b_readlink("/proc/self/exe",target,sizeof target);
+            link_errors+=n!=(ssize_t)strlen(executable_path) || memcmp(target,executable_path,strlen(executable_path)) || target[strlen(executable_path)]!=0x5a;
+        }
+        fprintf(log,"IO_READLINK_EXTRA errors=%d regular_closed=CHECKED missing=CHECKED closed_fd=CHECKED executable=CHECKED\n",link_errors);
+        errors+=link_errors;
+    }
     void *file = b_fopen(path, "r+");
     if (!file) ++errors;
     else {

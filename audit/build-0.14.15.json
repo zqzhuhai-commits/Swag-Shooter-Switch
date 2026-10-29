@@ -1,0 +1,16 @@
+{
+  "version": "0.14.15",
+  "artifact": "swag-switch-stage14.15-continuous-run.nro",
+  "bytes": 450713493,
+  "sha256": "ec695f043e77e5aeac1229c667a8aded3220de1daae03f90995d889aeda19c50",
+  "local_build": "PASS",
+  "embedded_files_verified": 1863,
+  "runtime_hardware_validation": "PENDING",
+  "game_screen_confirmed": false,
+  "previous_device_version": "0.14.14",
+  "previous_readlink_errors": 0,
+  "previous_egl_window_created": true,
+  "previous_first_ten_render_returns": 1,
+  "previous_stop": "absolute 120-second watchdog during resource loading",
+  "previous_native_fault": false
+}

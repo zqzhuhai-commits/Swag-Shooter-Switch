@@ -21,7 +21,7 @@ typedef struct Backing {
 typedef struct Mapping {
     unsigned char *base, *permissions;
     size_t size, active;
-    int anonymous,lazy;
+    int anonymous,lazy,shared_readonly;
     VirtmemReservation *reservation;
     Backing *backing;
     struct Mapping *next;
@@ -59,7 +59,9 @@ static int permissions(int prot) { return (prot & ~3) ? -1 : prot; }
 static void *mmap_impl(void *hint, size_t length, int prot, int flags, int fd, int64_t offset) {
     (void)hint;
     if (!length || length > 512u * 1024u * 1024u || offset < 0 || (offset & 4095) ||
-        permissions(prot) < 0 || (flags & ~(2 | 0x20 | 0x4000 | 0x20000)) || !(flags & 2)) {
+        permissions(prot) < 0 || (flags & ~(3 | 0x20 | 0x4000 | 0x20000)) ||
+        ((flags&3)!=1 && (flags&3)!=2) ||
+        ((flags&3)==1 && ((flags&0x20) || prot!=1))) {
         if(memory_log) fprintf(memory_log,"MMAP_REJECT length=%zu prot=%x flags=%x offset=%lld limit_bytes=%u\n",length,prot,flags,(long long)offset,512u*1024u*1024u);
         fail(EINVAL); return (void *)UINTPTR_MAX;
     }
@@ -105,6 +107,9 @@ static void *mmap_impl(void *hint, size_t length, int prot, int flags, int fd, i
     if (R_FAILED(rc)) { if(memory_log) fprintf(memory_log,"MMAP_PERMISSION_FAIL result=%x address=%p size=%zu prot=%x\n",rc,m->base,rounded,prot); errno = ENOTSUP; goto file_error; }
     memset(m->permissions, prot | 8, rounded / 4096);
     m->size = rounded; m->active = rounded / 4096; m->anonymous = !!(flags & 0x20);
+    /* Immutable file snapshot supports metadata's read-only MAP_SHARED.
+     * Writable shared mappings need writeback/coherence and remain rejected. */
+    m->shared_readonly=(flags&3)==1;
     mutexLock(&map_lock); m->next = maps; maps = m; mutexUnlock(&map_lock);
     return m->base;
 file_error: {
@@ -132,7 +137,26 @@ static void *b_mmap(void *hint,size_t length,int prot,int flags,int fd,int64_t o
 static Result commit_lazy_pages(Mapping *m,size_t first,size_t pages) {
     for(size_t p=first;p<first+pages;) {
         if(m->permissions[p]&16) { ++p; continue; }
+        Backing *existing=m->backing;
+        while(existing && !(p>=existing->first && p-existing->first<existing->size/4096)) existing=existing->next;
+        if(existing) {
+            size_t end=p+1;
+            while(end<first+pages && end<existing->first+existing->size/4096 && !(m->permissions[end]&16)) ++end;
+            size_t bytes=(end-p)*4096;
+            void *destination=m->base+p*4096;
+            void *source=existing->source+(p-existing->first)*4096;
+            virtmemLock();
+            Result rc=svcMapProcessCodeMemory(envGetOwnProcessHandle(),(u64)destination,(u64)source,bytes);
+            virtmemUnlock();
+            if(R_FAILED(rc)) return rc;
+            for(size_t i=p;i<end;++i) m->permissions[i]|=16;
+            rc=svcSetProcessMemoryPermission(envGetOwnProcessHandle(),(u64)destination,bytes,Perm_Rw);
+            if(R_FAILED(rc)) return rc;
+            for(size_t i=p;i<end;++i) m->permissions[i]=(m->permissions[i]&~3)|3;
+            p=end; continue;
+        }
         size_t end=p+1; while(end<first+pages && !(m->permissions[end]&16)) ++end;
+        for(Backing *b=m->backing;b;b=b->next) if(b->first>p && b->first<end) end=b->first;
         size_t bytes=(end-p)*4096;
         Backing *b=calloc(1,sizeof *b);
         if(!b) return MAKERESULT(Module_Libnx,LibnxError_OutOfMemory);
@@ -154,14 +178,31 @@ static Result commit_lazy_pages(Mapping *m,size_t first,size_t pages) {
     }
     return 0;
 }
+/* Code-memory aliases reject Perm_None. Remove their destination mapping
+ * for guards while retaining the source allocation for a later recommit. */
+static Result unmap_lazy_pages(Mapping *m,size_t first,size_t pages) {
+    for(Backing *b=m->backing;b;b=b->next) {
+        size_t start=first>b->first ? first:b->first;
+        size_t end=first+pages;
+        if(end>b->first+b->size/4096) end=b->first+b->size/4096;
+        for(size_t p=start;p<end;) {
+            if(!(m->permissions[p]&16)) { ++p; continue; }
+            size_t next=p+1; while(next<end && (m->permissions[next]&16)) ++next;
+            virtmemLock();
+            Result rc=svcUnmapProcessCodeMemory(envGetOwnProcessHandle(),(u64)(m->base+p*4096),(u64)(b->source+(p-b->first)*4096),(next-p)*4096);
+            virtmemUnlock();
+            if(R_FAILED(rc)) return rc;
+            for(size_t i=p;i<next;++i) m->permissions[i]&=~19;
+            p=next;
+        }
+    }
+    return 0;
+}
 static Result release_lazy_backing(Mapping *m) {
+    Result rc=unmap_lazy_pages(m,0,m->size/4096);
+    if(R_FAILED(rc)) return rc;
     while(m->backing) {
         Backing *b=m->backing;
-        virtmemLock();
-        Result rc=svcUnmapProcessCodeMemory(envGetOwnProcessHandle(),(u64)(m->base+b->first*4096),(u64)b->source,b->size);
-        virtmemUnlock();
-        if(R_FAILED(rc)) return rc;
-        for(size_t p=b->first;p<b->first+b->size/4096;++p) m->permissions[p]&=~16;
         m->backing=b->next; free(b->source); free(b);
     }
     return 0;
@@ -171,6 +212,7 @@ static Result release_lazy_backing(Mapping *m) {
  * pages; query and change each current region independently. map_lock held.
  * Keep the guest page table synchronized even on a later partial failure. */
 static Result set_mapping_permissions(Mapping *m,size_t first,size_t pages,int prot) {
+    if(m->lazy && !prot) return unmap_lazy_pages(m,first,pages);
     size_t end=first+pages;
     for(size_t page=first;page<end;) {
         uintptr_t address=(uintptr_t)m->base+page*4096;
@@ -198,6 +240,7 @@ static int protect_impl(void *address, size_t length, int prot) {
     mutexLock(&map_lock);
     Mapping *m = find(address, size);
     if (!m) { mutexUnlock(&map_lock); return fail(ENOMEM); }
+    if(m->shared_readonly && (prot&2)) { mutexUnlock(&map_lock); return fail(EACCES); }
     size_t first = ((char *)address - (char *)m->base) / 4096;
     for (size_t p = first; p < first + size / 4096; ++p)
         if (!(m->permissions[p] & 8)) { mutexUnlock(&map_lock); return fail(ENOMEM); }
@@ -244,9 +287,14 @@ static int advise_impl(void *address, size_t length, int advice) {
     if (advice == 4 || advice == 8) {
         if (!m->anonymous) { mutexUnlock(&map_lock); return fail(ENOTSUP); }
         for (size_t p = first; p < first + size / 4096; ++p) {
-            if(m->lazy && !(m->permissions[p]&16)) continue; /* never committed: already zero */
             unsigned char *page = m->base + p * 4096;
             int old_prot=m->permissions[p]&3;
+            if(m->lazy && !(m->permissions[p]&16)) {
+                Backing *b=m->backing;
+                while(b && !(p>=b->first && p-b->first<b->size/4096)) b=b->next;
+                if(!b) continue; /* never committed: already zero */
+                if(R_FAILED(commit_lazy_pages(m,p,1))) { mutexUnlock(&map_lock); return fail(ENOTSUP); }
+            }
             if (R_FAILED(set_mapping_permissions(m,p,1,Perm_Rw))) { mutexUnlock(&map_lock); return fail(ENOTSUP); }
             memset(page, 0, 4096);
             if (R_FAILED(set_mapping_permissions(m,p,1,old_prot))) { mutexUnlock(&map_lock); return fail(ENOTSUP); }
@@ -302,9 +350,53 @@ int guest_memory_selftest(FILE *log) {
         p = b_mmap(NULL, 4096, 1, 2, fd, 0);
         if (p == (void *)UINTPTR_MAX) { ++errors; fprintf(log, "MEMORY_FILEMAP_FAIL errno=%d\n", *bionic_errno_ptr()); }
         else { errors += memcmp(p, ELFMAG, 4) != 0; errors += b_munmap(p, 4096) != 0; }
+        int shared_errors=0;
+        int (*dup_file)(int)=(int (*)(int))runtime_io_resolve("dup");
+        int alias=dup_file(fd);
+        if(alias<0) ++shared_errors;
+        else {
+            p=b_mmap(NULL,4096,1,1,alias,0);
+            shared_errors+=close_file(alias)!=0;
+            if(p==(void *)UINTPTR_MAX) ++shared_errors;
+            else {
+                shared_errors+=memcmp(p,ELFMAG,4)!=0;
+                shared_errors+=R_FAILED(svcQueryMemory(&info,&page_info,(u64)p)) || info.perm!=Perm_R;
+                shared_errors+=b_mprotect(p,4096,3)!=-1 || *bionic_errno_ptr()!=13;
+                shared_errors+=b_munmap(p,4096)!=0;
+            }
+        }
+        shared_errors+=b_mmap(NULL,4096,3,1,fd,0)!=(void *)UINTPTR_MAX;
+        shared_errors+=b_mmap(NULL,4096,1,3,fd,0)!=(void *)UINTPTR_MAX;
+        errors+=shared_errors;
+        fprintf(log,"MEMORY_SHARED_READONLY errors=%d dup_closed_after_map=CHECKED writable_shared=REJECTED external_write_coherence=UNSUPPORTED\n",shared_errors);
         errors += close_file(fd) != 0;
     }
     errors += b_mmap(NULL, 0, 3, 2 | 0x20, -1, 0) != (void *)UINTPTR_MAX;
+    int metadata_errors=0;
+    fd=open_file("/il2cpp/Metadata/global-metadata.dat",0);
+    struct stat metadata_stat;
+    if(fd<0) ++metadata_errors;
+    else {
+        if(fstat(runtime_io_native_fd(fd),&metadata_stat) || metadata_stat.st_size<=0) ++metadata_errors;
+        else {
+            size_t size=(metadata_stat.st_size+4095)&~(size_t)4095;
+            p=b_mmap(NULL,size,1,1,fd,0);
+            if(p==(void *)UINTPTR_MAX) ++metadata_errors;
+            else {
+                unsigned char block[512];
+                for(size_t off=0;off<(size_t)metadata_stat.st_size;) {
+                    size_t n=(size_t)metadata_stat.st_size-off; if(n>sizeof block) n=sizeof block;
+                    if(runtime_io_read_at(fd,block,n,off)!=(int64_t)n || memcmp(p+off,block,n)) { ++metadata_errors; break; }
+                    off+=n;
+                }
+                for(size_t off=metadata_stat.st_size;off<size;++off) if(p[off]) { ++metadata_errors; break; }
+                metadata_errors+=b_munmap(p,size)!=0;
+            }
+        }
+        metadata_errors+=close_file(fd)!=0;
+    }
+    errors+=metadata_errors;
+    fprintf(log,"MEMORY_METADATA_SHARED errors=%d full_file_comparison=CHECKED eof_padding=CHECKED\n",metadata_errors);
     /* Mixed permissions in both directions and munmap over a trimmed hole. */
     int mixed_errors=0;
     p=b_mmap(NULL,24576,3,0x22,-1,0);
@@ -344,12 +436,23 @@ int guest_memory_selftest(FILE *log) {
             committed[0]=0x6a; committed[16383]=0x9b;
             int guarded=b_mprotect(committed,16384,0)==0;
             vm_errors+=!guarded;
+            if(guarded) vm_errors+=R_FAILED(svcQueryMemory(&info,&page_info,(u64)committed)) || info.perm!=Perm_None;
             int restored=b_mprotect(committed,16384,3)==0;
             if(!restored) ++vm_errors;
             else {
                 vm_errors+=committed[0]!=0x6a || committed[16383]!=0x9b;
                 vm_errors+=b_madvise(committed,16384,4)!=0;
                 vm_errors+=committed[0]!=0 || committed[16383]!=0;
+                committed[4096]=0x45;
+                int middle_guard=b_mprotect(committed+4096,4096,0)==0;
+                vm_errors+=!middle_guard;
+                if(middle_guard) {
+                    vm_errors+=committed[0]!=0 || committed[16383]!=0;
+                    vm_errors+=b_madvise(committed+4096,4096,4)!=0;
+                    int middle_rw=b_mprotect(committed+4096,4096,3)==0;
+                    vm_errors+=!middle_rw;
+                    if(middle_rw) vm_errors+=committed[4096]!=0;
+                }
             }
         }
         vm_errors+=b_munmap(committed,alignment)!=0;

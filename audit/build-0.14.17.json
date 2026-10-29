@@ -1,0 +1,16 @@
+{
+  "version": "0.14.17",
+  "artifact": "swag-switch-stage14.17-offline-start.nro",
+  "bytes": 450721685,
+  "sha256": "c78a81c686639ce5cb3585a8da1cc4f2346ad73cc9537c89f540041afbbe9995",
+  "local_build": "PASS",
+  "embedded_files_verified": 1863,
+  "runtime_hardware_validation": "PENDING",
+  "game_screen_confirmed": false,
+  "dns_policy": "OFFLINE_IMMEDIATE_ERROR",
+  "numeric_addresses": "LOCAL_CONVERSION_ONLY",
+  "previous_device_version": "0.14.16",
+  "previous_random_test_errors": 0,
+  "previous_resolver_test_errors": 1,
+  "previous_engine_started": false
+}

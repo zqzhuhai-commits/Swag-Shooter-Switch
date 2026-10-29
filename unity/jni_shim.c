@@ -29,6 +29,7 @@
 #include "nx_jni.h"
 #include "util.h"
 #include <errno.h>
+#include <time.h>
 
 #define JNI_VTABLE_SIZE 512
 
@@ -493,18 +494,19 @@ static int prefs_read_field(FILE *file, void *data, size_t size) {
 static int prefs_paths(char *userdata, size_t userdata_size,
                        char *path, size_t path_size,
                        char *tmp, size_t tmp_size) {
-  return hd_game_path(userdata, userdata_size, "userdata") == 0 &&
-         hd_game_path(path, path_size, "userdata/shared_prefs.bin") == 0 &&
-         hd_game_path(tmp, tmp_size, "userdata/.shared_prefs.tmp") == 0;
+  int a=snprintf(userdata,userdata_size,"sdmc:/switch/swag-userdata");
+  int b=snprintf(path,path_size,"sdmc:/switch/swag-userdata/shared_prefs.bin");
+  int c=snprintf(tmp,tmp_size,"sdmc:/switch/swag-userdata/.shared_prefs.tmp");
+  return a>=0 && (size_t)a<userdata_size && b>=0 && (size_t)b<path_size && c>=0 && (size_t)c<tmp_size;
 }
 static int prefs_save_locked(void) {
   char userdata[PATH_MAX], path[PATH_MAX], tmp[PATH_MAX];
   if (!prefs_paths(userdata, sizeof userdata, path, sizeof path,
                    tmp, sizeof tmp))
     return 0;
-  mkdir(userdata, 0755);
+  if(mkdir(userdata,0755) && errno!=EEXIST) { debugPrintf("PREFS_SAVE_FAIL stage=mkdir errno=%d\n",errno); return 0; }
   FILE *file = fopen(tmp, "wb");
-  if (!file) return 0;
+  if (!file) { debugPrintf("PREFS_SAVE_FAIL stage=open errno=%d\n",errno); return 0; }
   static const unsigned char magic[8] = {'H','C','P','R','E','F','2',0};
   uint32_t count = 0;
   for (int i = 0; i < g_prefs_n; i++)
@@ -531,9 +533,21 @@ static int prefs_save_locked(void) {
          (!string_len ||
           prefs_write_field(file, entry->sval, string_len));
   }
-  if (ok && fflush(file) == 0) ok = fsync(fileno(file)) == 0;
-  if (fclose(file) != 0) ok = 0;
-  if (ok) ok = rename(tmp, path) == 0;
+  if(!ok) debugPrintf("PREFS_SAVE_FAIL stage=write errno=%d\n",errno);
+  if(ok && fflush(file)) { debugPrintf("PREFS_SAVE_FAIL stage=flush errno=%d\n",errno); ok=0; }
+  if(ok && fsync(fileno(file))) { debugPrintf("PREFS_SAVE_FAIL stage=fsync errno=%d\n",errno); ok=0; }
+  if(fclose(file)) { debugPrintf("PREFS_SAVE_FAIL stage=close errno=%d\n",errno); ok=0; }
+  if(ok && rename(tmp,path)) {
+    if(errno!=EEXIST) { debugPrintf("PREFS_SAVE_FAIL stage=rename errno=%d\n",errno); ok=0; }
+    else {
+      const char *backup="sdmc:/switch/swag-userdata/.shared_prefs.old";
+      if(unlink(backup) && errno!=ENOENT) ok=0;
+      if(ok && rename(path,backup)) ok=0;
+      if(ok && rename(tmp,path)) { int saved=errno; rename(backup,path); errno=saved; ok=0; }
+      if(ok) { unlink(backup); debugPrintf("PREFS_SAVE_REPLACE result=1 backup_rollback=AVAILABLE\n"); }
+      else debugPrintf("PREFS_SAVE_FAIL stage=replace errno=%d\n",errno);
+    }
+  }
   if (!ok) unlink(tmp);
   return ok;
 }
@@ -545,17 +559,15 @@ static int prefs_save(void) {
 }
 void jni_prefs_flush(void) {
   if (!prefs_save()) {
-    char path[PATH_MAX];
-    if (hd_game_path(path, sizeof path, "userdata/shared_prefs.bin") != 0)
-      snprintf(path, sizeof path, "%s", "userdata/shared_prefs.bin");
-    debugPrintf("[PREFS] falha ao persistir %s\n", path);
+    debugPrintf("[PREFS] persist failed path=sdmc:/switch/swag-userdata/shared_prefs.bin errno=%d\n",errno);
   }
 }
 static void prefs_load(void) {
-  char path[PATH_MAX];
-  if (hd_game_path(path, sizeof path, "userdata/shared_prefs.bin") != 0)
+  char root[PATH_MAX],path[PATH_MAX],tmp[PATH_MAX];
+  if (!prefs_paths(root,sizeof root,path,sizeof path,tmp,sizeof tmp))
     return;
   FILE *file = fopen(path, "rb");
+  if(!file && errno==ENOENT) file=fopen("sdmc:/switch/swag-userdata/.shared_prefs.old","rb");
   if (!file) return;
   static const unsigned char expected[8] = {'H','C','P','R','E','F','2',0};
   unsigned char magic[8];
@@ -1126,6 +1138,46 @@ struct hk_inject_s { int action, keycode, source, deviceId, metaState, repeat,
 struct hk_inject_s g_hk_inject;       /* exportado p/ main_recon */
 static int g_obj_keyevent;            /* sentinela do objeto KeyEvent */
 void *hk_keyevent_object(void) { return &g_obj_keyevent; }
+static _Thread_local struct { int action; float x,y; long event_time,down_time; } switch_touch;
+void *jni_switch_touch_event(int action,float x,float y,long milliseconds) {
+  if(action==0) switch_touch.down_time=milliseconds;
+  switch_touch.action=action; switch_touch.x=x; switch_touch.y=y; switch_touch.event_time=milliseconds;
+  return &switch_touch;
+}
+void *jni_switch_key_event(int action,int key,long milliseconds) {
+  if(action==0) g_hk_inject.downTime=milliseconds;
+  g_hk_inject.action=action; g_hk_inject.keycode=key; g_hk_inject.source=0x101;
+  g_hk_inject.deviceId=0; g_hk_inject.eventTime=milliseconds;
+  return &g_obj_keyevent;
+}
+static int touch_int(void *object,const char *name,int *out) {
+  if(object==&g_obj_keyevent && name) {
+    if(!strcmp(name,"getAction")) *out=g_hk_inject.action;
+    else if(!strcmp(name,"getKeyCode")) *out=g_hk_inject.keycode;
+    else if(!strcmp(name,"getSource")) *out=g_hk_inject.source;
+    else if(!strcmp(name,"getDeviceId") || !strcmp(name,"getMetaState") || !strcmp(name,"getFlags") || !strcmp(name,"getRepeatCount") || !strcmp(name,"getScanCode") || !strcmp(name,"getUnicodeChar")) *out=0;
+    else return 0;
+    return 1;
+  }
+  if(object!=&switch_touch || !name) return 0;
+  if(!strcmp(name,"getAction") || !strcmp(name,"getActionMasked")) *out=switch_touch.action;
+  else if(!strcmp(name,"getPointerCount")) *out=1;
+  else if(!strcmp(name,"getSource")) *out=0x1002;
+  else if(!strcmp(name,"getToolType")) *out=1;
+  else if(!strcmp(name,"getPointerId") || !strcmp(name,"findPointerIndex") || !strcmp(name,"getActionIndex") || !strcmp(name,"getDeviceId") || !strcmp(name,"getMetaState") || !strcmp(name,"getButtonState") || !strcmp(name,"getFlags") || !strcmp(name,"getEdgeFlags") || !strcmp(name,"getHistorySize")) *out=0;
+  else return 0;
+  return 1;
+}
+static int touch_float(void *object,const char *name,float *out) {
+  if(object!=&switch_touch || !name) return 0;
+  if(!strcmp(name,"getX") || !strcmp(name,"getRawX")) *out=switch_touch.x;
+  else if(!strcmp(name,"getY") || !strcmp(name,"getRawY")) *out=switch_touch.y;
+  else if(!strcmp(name,"getPressure")) *out=switch_touch.action==1 ? 0.0f : 1.0f;
+  else if(!strcmp(name,"getSize") || !strcmp(name,"getXPrecision") || !strcmp(name,"getYPrecision") || !strcmp(name,"getTouchMajor") || !strcmp(name,"getTouchMinor")) *out=1.0f;
+  else if(!strcmp(name,"getOrientation") || !strcmp(name,"getAxisValue")) *out=0.0f;
+  else return 0;
+  return 1;
+}
 static int g_gamepad_device;          /* sentinela do InputDevice (Xbox 360 virtual) */
 static int g_current_activity;        /* UnityPlayer.currentActivity fake */
 static int g_current_activity_field_id;
@@ -1332,6 +1384,7 @@ static float jni_GetFloatField(void *env, void *obj, void *fieldID) {
 
 /* CallFloatMethodV (idx 56): Display.getRefreshRate() -> 60Hz (0 quebra o engine) */
 static float jni_CallFloatMethodV(void *env, void *obj, void *methodID, va_list ap) {
+  float value; if(touch_float(obj,mid_name(methodID),&value)) return value;
   (void)env; (void)obj;
   const char *nm = mid_name(methodID);
   if (nm && strcmp(nm, "getRefreshRate") == 0) return 60.0f;
@@ -1350,6 +1403,7 @@ static float jni_CallFloatMethod(void *env, void *obj, void *methodID, ...) {
 }
 static float jni_CallFloatMethodA(void *env, void *obj, void *methodID,
                                   const jvalue *args) {
+  float value; if(touch_float(obj,mid_name(methodID),&value)) return value;
   (void)env;
   (void)obj;
   const char *nm = mid_name(methodID);
@@ -1872,6 +1926,10 @@ static void *jni_CallObjectMethodA(void *env, void *obj, void *methodID, const j
 static unsigned char jni_CallBooleanMethodV(void *env, void *obj,
                                             void *methodID, va_list ap) {
   const char *nm = mid_name(methodID);
+  if(nm && !strcmp(nm,"equals") && is_jstring(obj)) {
+    void *other=va_arg(ap,void *);
+    return is_jstring(other) && !strcmp(resolve_jstring(obj),resolve_jstring(other));
+  }
   if (nm) {
     if (obj == &g_fmod_device_obj && strcmp(nm, "isRunning") == 0)
       return __atomic_load_n(&g_fmod_should_run, __ATOMIC_ACQUIRE) ? 1 : 0;
@@ -1926,6 +1984,10 @@ static unsigned char jni_CallBooleanMethod(void *env, void *obj, void *methodID,
 static unsigned char jni_CallBooleanMethodA(void *env, void *obj,
                                              void *methodID,
                                              const jvalue *args) {
+  if(mid_name(methodID) && !strcmp(mid_name(methodID),"equals") && is_jstring(obj)) {
+    void *other=args ? args[0].l : NULL;
+    return is_jstring(other) && !strcmp(resolve_jstring(obj),resolve_jstring(other));
+  }
   (void)env;
   (void)obj;
   const char *nm = mid_name(methodID);
@@ -1952,6 +2014,7 @@ static unsigned char jni_CallBooleanMethodA(void *env, void *obj,
 /* CallIntMethod — variante V */
 static jint jni_CallIntMethodV(void *env, void *obj, void *methodID,
                                va_list ap) {
+  int value; if(touch_int(obj,mid_name(methodID),&value)) return value;
   (void)env;
   const char *nm = mid_name(methodID);
   /* java.lang.String.length(). O Unity usa esse valor para dimensionar na
@@ -2057,6 +2120,7 @@ static jint jni_CallIntMethod(void *env, void *obj, void *methodID, ...) {
 }
 static jint jni_CallIntMethodA(void *env, void *obj, void *methodID,
                                const jvalue *args) {
+  int value; if(touch_int(obj,mid_name(methodID),&value)) return value;
   (void)env;
   const char *nm = mid_name(methodID);
   if (nm && strcmp(nm, "length") == 0 && is_jstring(obj))
@@ -2288,7 +2352,7 @@ static void *jni_CallStaticObjectMethodV(void *env, void *clazz,
     debugPrintf("jni_shim: newInterfaceProxy(handle=%ld) -> %p\n", h, proxy);
     if (g_next_proxy_is_framecb ||
         proxy_has_interface(proxy, PROXY_IFACE_FRAME_CALLBACK)) {
-      g_framecb_proxy = proxy;
+      __atomic_store_n(&g_framecb_proxy,proxy,__ATOMIC_RELEASE);
       g_next_proxy_is_framecb = 0;
       debugPrintf("jni_shim: [CHOREO] FrameCallback capturado: proxy=%p handle=%ld\n", proxy, h);
     }
@@ -2344,7 +2408,7 @@ static void *jni_CallStaticObjectMethodA(void *env, void *clazz, void *methodID,
     debugPrintf("jni_shim: newInterfaceProxyA(handle=%ld) -> %p\n", h, proxy);
     if (g_next_proxy_is_framecb ||
         proxy_has_interface(proxy, PROXY_IFACE_FRAME_CALLBACK)) {
-      g_framecb_proxy = proxy;
+      __atomic_store_n(&g_framecb_proxy,proxy,__ATOMIC_RELEASE);
       g_next_proxy_is_framecb = 0;
       debugPrintf("jni_shim: [CHOREO] FrameCallback capturado por A: proxy=%p handle=%ld\n",
                   proxy, h);
@@ -2407,7 +2471,7 @@ static void *jni_CallStaticObjectMethodA(void *env, void *clazz, void *methodID,
 static unsigned char jni_CallStaticBooleanMethod(void *env, void *clazz,
                                                  void *methodID, ...) {
   const char *nm = mid_name(methodID);
-  if (nm && strcmp(nm, "hasTouchScreen") == 0) return 0;
+  if (nm && strcmp(nm, "hasTouchScreen") == 0) return 1;
   va_list ap;
   va_start(ap, methodID);
   unsigned char result = nx_call_v(env, clazz, methodID, ap).i ? 1 : 0;
@@ -2448,13 +2512,44 @@ static jint jni_CallStaticIntMethodV(void *env, void *clazz, void *methodID, va_
   return nx_call_v(env, clazz, methodID, ap).i;
 }
 
-/* CallStaticVoidMethod (index 145) */
+static int64_t static_long_clock(void *method,unsigned slot) {
+  const char *name=mid_name(method),*signature=mid_sig(method);
+  struct timespec now;
+  if(name && signature && !strcmp(signature,"()J")) {
+    if(!strcmp(name,"nanoTime")) {
+      if(!clock_gettime(CLOCK_MONOTONIC,&now)) return (int64_t)now.tv_sec*1000000000+now.tv_nsec;
+    } else if(!strcmp(name,"currentTimeMillis")) {
+      if(!clock_gettime(CLOCK_REALTIME,&now)) return (int64_t)now.tv_sec*1000+now.tv_nsec/1000000;
+    }
+  }
+  extern void unity_jni_unsupported(unsigned) __attribute__((noreturn));
+  unity_jni_unsupported(slot);
+}
+static int64_t jni_CallStaticLongMethod(void *env,void *clazz,void *method,...) { return static_long_clock(method,132); }
+static int64_t jni_CallStaticLongMethodV(void *env,void *clazz,void *method,va_list ap) { return static_long_clock(method,133); }
+static int64_t jni_CallStaticLongMethodA(void *env,void *clazz,void *method,const void *args) { return static_long_clock(method,134); }
+
+static int notification_cancel(void *clazz,void *method) {
+  const char *name=mid_name(method),*signature=mid_sig(method),*owner=class_name_for(clazz);
+  if(owner && !strcmp(owner,"tan/be/ek/notificationnimane/Controller") && name && !strcmp(name,"CancelNotification") && signature && !strcmp(signature,"(I)V")) {
+    debugPrintf("JNI_NOTIFICATION_CANCEL scheduled_notifications=0 platform_scheduler=UNAVAILABLE\n");
+    return 1;
+  }
+  return 0;
+}
+static void jni_CallStaticVoidMethodV(void *env,void *clazz,void *method,va_list ap) {
+  if(!notification_cancel(clazz,method)) (void)nx_call_v(env,clazz,method,ap);
+}
+static void jni_CallStaticVoidMethodA(void *env,void *clazz,void *method,const jvalue *args) {
+  if(!notification_cancel(clazz,method)) (void)nx_call_a(env,clazz,method,args);
+}
+/* CallStaticVoidMethod */
 static void jni_CallStaticVoidMethod(void *env, void *clazz, void *methodID,
                                      ...) {
   debugPrintf("jni_shim: CallStaticVoidMethod(mid=%p)\n", methodID);
   va_list ap;
   va_start(ap, methodID);
-  (void)nx_call_v(env, clazz, methodID, ap);
+  jni_CallStaticVoidMethodV(env, clazz, methodID, ap);
   va_end(ap);
 }
 
@@ -2484,6 +2579,7 @@ static void *jni_GetStaticObjectField(void *env, void *clazz, void *fieldID) {
   (void)env;
   (void)clazz;
   const char *nm = mid_name(fieldID);
+  if(nm && !strcmp(nm,"MEDIA_MOUNTED")) return make_jstring("mounted");
   if (fieldID == &g_current_activity_field_id ||
       (nm && strcmp(nm, "currentActivity") == 0)) {
     debugPrintf("jni_shim: GetStaticObjectField(currentActivity) -> activity\n");
@@ -2710,6 +2806,7 @@ static void jni_DeleteWeakGlobalRef(void *env, void *obj) {
   (void)obj;
 }
 static void *jni_GetObjectClass(void *env, void *obj) {
+  if(obj==&switch_touch) return class_for("android/view/MotionEvent");
   (void)env;
   if (is_jstring(obj)) return class_for("java/lang/String");
   if (obj == &g_current_activity)
@@ -2731,6 +2828,7 @@ static void *jni_GetObjectClass(void *env, void *obj) {
   return &fake_obj_class;
 }
 static unsigned char jni_IsInstanceOf(void *env, void *obj, void *clazz) {
+  if(obj==&switch_touch) return clazz==class_for("android/view/MotionEvent") || clazz==class_for("android/view/InputEvent");
   (void)env;
   if (is_jstring(obj)) return clazz == class_for("java/lang/String");
   if (obj == &g_obj_keyevent) return clazz == class_for("android/view/KeyEvent");
@@ -2741,6 +2839,10 @@ static unsigned char jni_IsSameObject(void *env, void *a, void *b) {
 }
 /* CallLongMethod V — getEventTime/getDownTime do KeyEvent (retornam long) */
 static long jni_CallLongMethodV(void *env, void *obj, void *methodID, va_list ap) {
+  if(obj==&switch_touch && mid_name(methodID)) {
+    if(!strcmp(mid_name(methodID),"getEventTime")) return switch_touch.event_time;
+    if(!strcmp(mid_name(methodID),"getDownTime")) return switch_touch.down_time;
+  }
   (void)env;
   if (obj == (void *)&g_long_box_sentinel) return g_doframe_nanos;  /* Long.longValue() do doFrame */
   const char *nm = mid_name(methodID);
@@ -2784,6 +2886,10 @@ static long jni_CallLongMethod(void *env, void *obj, void *methodID, ...) {
 }
 static long jni_CallLongMethodA(void *env, void *obj, void *methodID,
                                 const jvalue *args) {
+  if(obj==&switch_touch && mid_name(methodID)) {
+    if(!strcmp(mid_name(methodID),"getEventTime")) return switch_touch.event_time;
+    if(!strcmp(mid_name(methodID),"getDownTime")) return switch_touch.down_time;
+  }
   (void)env;
   if (obj == (void *)&g_long_box_sentinel) return g_doframe_nanos;
   const char *nm = mid_name(methodID);
@@ -3131,7 +3237,7 @@ static void run_runnable(void *env, void *runnable) {
  * FrameCallback capturado. g_choreo_log liga log detalhado das queries (1ª vez). */
 int g_choreo_log = 0;
 int jni_choreo_doframe(void *env, long nanos) {
-  void *proxy = g_framecb_proxy;
+  void *proxy = __atomic_load_n(&g_framecb_proxy,__ATOMIC_ACQUIRE);
   if (!proxy) return 0;
   long h = proxy_handle(proxy);
   void *invoke = jni_find_native("invoke");
@@ -3146,13 +3252,13 @@ int jni_choreo_doframe(void *env, long nanos) {
   return 1;
 }
 void *jni_shim_env(void) { return jni_env_ptr; }
-int jni_choreo_captured(void) { return g_framecb_proxy != NULL; }
+int jni_choreo_captured(void) { return __atomic_load_n(&g_framecb_proxy,__ATOMIC_ACQUIRE) != NULL; }
 
 /* ---- Handler$Callback.handleMessage(Message): invoca o delegate C# do proxy ----
  * Mesmo caminho do doFrame, com Method "handleMessage" + args Object[1]{Message}. O proxy
  * (g_framecb_proxy) implementa Handler$Callback E Choreographer$FrameCallback (mesmo handle). */
 void jni_handlemessage(void *env) {
-  void *proxy = g_framecb_proxy;
+  void *proxy = __atomic_load_n(&g_framecb_proxy,__ATOMIC_ACQUIRE);
   if (!proxy) { debugPrintf("jni_shim: handleMessage sem proxy capturado\n"); return; }
   long h = proxy_handle(proxy);
   void *invoke = jni_find_native("invoke");
@@ -3457,8 +3563,12 @@ void jni_shim_init(void **out_vm, void **out_env) {
   jni_env_vtable[118] = (uintptr_t)jni_CallStaticBooleanMethod; /* V */
   jni_env_vtable[129] = (uintptr_t)jni_CallStaticIntMethod;
   jni_env_vtable[130] = (uintptr_t)jni_CallStaticIntMethodV; /* V (va_list) */
+  jni_env_vtable[132] = (uintptr_t)jni_CallStaticLongMethod;
+  jni_env_vtable[133] = (uintptr_t)jni_CallStaticLongMethodV;
+  jni_env_vtable[134] = (uintptr_t)jni_CallStaticLongMethodA;
   jni_env_vtable[141] = (uintptr_t)jni_CallStaticVoidMethod;
-  jni_env_vtable[142] = (uintptr_t)jni_CallStaticVoidMethod; /* V */
+  jni_env_vtable[142] = (uintptr_t)jni_CallStaticVoidMethodV;
+  jni_env_vtable[143] = (uintptr_t)jni_CallStaticVoidMethodA;
   jni_env_vtable[144] = (uintptr_t)jni_GetStaticFieldID;
   jni_env_vtable[145] = (uintptr_t)jni_GetStaticObjectField;
   jni_env_vtable[150] = (uintptr_t)jni_GetStaticIntField;

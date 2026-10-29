@@ -1,0 +1,14 @@
+{
+  "version": "0.14.12",
+  "artifact": "swag-switch-stage14.12-metadata-map.nro",
+  "bytes": 450713493,
+  "sha256": "5baf4d9e7497b885fe88659164c02a579087993bacc0a930c362d4916a1e3ae7",
+  "local_build": "PASS",
+  "embedded_files_verified": 1863,
+  "runtime_hardware_validation": "PENDING",
+  "game_screen_confirmed": false,
+  "previous_device_version": "0.14.11",
+  "previous_memory_tests": "PASS",
+  "previous_metadata_mapping": "MAP_SHARED rejected EINVAL",
+  "previous_crash": "il2cpp+0xb777ac null read at 0x4a"
+}

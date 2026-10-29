@@ -5,6 +5,50 @@
 #include <string.h>
 #include <stdlib.h>
 static FILE *egl_log;
+typedef struct { EGLSurface surface; NWindow *window; } WindowSurface;
+static WindowSurface window_surfaces[16];
+static Mutex surface_lock;
+static EGLBoolean guest_query_surface(EGLDisplay display,EGLSurface surface,EGLint attribute,EGLint *value) {
+    EGLBoolean result=eglQuerySurface(display,surface,attribute,value);
+    if(!result || !value || *value || (attribute!=EGL_WIDTH && attribute!=EGL_HEIGHT)) return result;
+    NWindow *window=NULL;
+    mutexLock(&surface_lock);
+    for(unsigned i=0;i<16;++i) if(window_surfaces[i].surface==surface) { window=window_surfaces[i].window; break; }
+    mutexUnlock(&surface_lock);
+    if(window) {
+        u32 width=0,height=0;
+        Result rc=nwindowGetDimensions(window,&width,&height);
+        if(R_SUCCEEDED(rc) && width && height && width<=INT32_MAX && height<=INT32_MAX) {
+            *value=attribute==EGL_WIDTH ? width : height;
+            static unsigned corrections;
+            if(egl_log && __atomic_fetch_add(&corrections,1,__ATOMIC_RELAXED)<8)
+                fprintf(egl_log,"EGL_WINDOW_SIZE_CORRECTED attribute=%x value=%d source=nwindowGetDimensions\n",attribute,*value);
+        }
+    }
+    return result;
+}
+static EGLBoolean guest_destroy_surface(EGLDisplay display,EGLSurface surface) {
+    EGLBoolean result=eglDestroySurface(display,surface);
+    if(result) {
+        mutexLock(&surface_lock);
+        for(unsigned i=0;i<16;++i) if(window_surfaces[i].surface==surface) window_surfaces[i]=(WindowSurface){0};
+        mutexUnlock(&surface_lock);
+    }
+    return result;
+}
+static EGLBoolean trace_swap(EGLDisplay display,EGLSurface surface) {
+    static unsigned calls;
+    unsigned call=__atomic_add_fetch(&calls,1,__ATOMIC_RELAXED);
+    if(egl_log && (call<=3 || call%60==0)) { fprintf(egl_log,"ENGINE_PRESENT_BEGIN count=%u\n",call); fflush(egl_log); }
+    EGLBoolean result=eglSwapBuffers(display,surface);
+    if(egl_log && call<=3) {
+        EGLint width=0,height=0;
+        EGLBoolean w=guest_query_surface(display,surface,EGL_WIDTH,&width),h=guest_query_surface(display,surface,EGL_HEIGHT,&height);
+        fprintf(egl_log,"ENGINE_PRESENT_SIZE width=%d height=%d query_ok=%d\n",width,height,w && h);
+    }
+    if(egl_log && (!result || call<=3 || call%60==0)) { fprintf(egl_log,"ENGINE_PRESENT_END count=%u result=%u visual_confirmation=REQUIRED\n",call,result); fflush(egl_log); }
+    return result;
+}
 void android_graphics_set_log(FILE *log) { egl_log=log; }
 static EGLBoolean trace_initialize(EGLDisplay display,EGLint *major,EGLint *minor) {
     if(egl_log) { fprintf(egl_log,"ENGINE_EGL_BEGIN initialize\n"); fflush(egl_log); }
@@ -21,6 +65,15 @@ static EGLContext trace_context(EGLDisplay display,EGLConfig config,EGLContext s
 static EGLSurface trace_window(EGLDisplay display,EGLConfig config,EGLNativeWindowType window,const EGLint *attributes) {
     if(egl_log) { fprintf(egl_log,"ENGINE_EGL_BEGIN window native=%p\n",window); fflush(egl_log); }
     EGLSurface result=eglCreateWindowSurface(display,config,window,attributes);
+    if(result!=EGL_NO_SURFACE && window==(EGLNativeWindowType)nwindowGetDefault()) {
+        int registered=0;
+        mutexLock(&surface_lock);
+        for(unsigned i=0;i<16;++i) if(!window_surfaces[i].surface) { window_surfaces[i]=(WindowSurface){result,(NWindow *)window}; registered=1; break; }
+        mutexUnlock(&surface_lock);
+        EGLint width=0,height=0;
+        EGLBoolean w=guest_query_surface(display,result,EGL_WIDTH,&width),h=guest_query_surface(display,result,EGL_HEIGHT,&height);
+        if(egl_log) fprintf(egl_log,"EGL_WINDOW_SIZE_CHECK tracked=%d width=%d height=%d query_ok=%d\n",registered,width,height,w && h);
+    }
     if(egl_log) fprintf(egl_log,"ENGINE_EGL_END window result=%p\n",result);
     return result;
 }
@@ -91,13 +144,13 @@ static const Binding bindings[]={
     GRAPHICS_BIND("ANativeWindow_getHeight",window_height), GRAPHICS_BIND("ANativeWindow_setBuffersGeometry",window_geometry),
     GRAPHICS_BIND("eglChooseConfig",eglChooseConfig), GRAPHICS_BIND("eglCreateContext",trace_context),
     GRAPHICS_BIND("eglCreatePbufferSurface",eglCreatePbufferSurface), GRAPHICS_BIND("eglCreateWindowSurface",trace_window),
-    GRAPHICS_BIND("eglDestroyContext",eglDestroyContext), GRAPHICS_BIND("eglDestroySurface",eglDestroySurface),
+    GRAPHICS_BIND("eglDestroyContext",eglDestroyContext), GRAPHICS_BIND("eglDestroySurface",guest_destroy_surface),
     GRAPHICS_BIND("eglGetConfigAttrib",eglGetConfigAttrib), GRAPHICS_BIND("eglGetCurrentContext",eglGetCurrentContext),
     GRAPHICS_BIND("eglGetCurrentSurface",eglGetCurrentSurface), GRAPHICS_BIND("eglGetDisplay",eglGetDisplay),
     GRAPHICS_BIND("eglGetError",eglGetError), GRAPHICS_BIND("eglGetProcAddress",guest_get_proc),
     GRAPHICS_BIND("eglInitialize",trace_initialize), GRAPHICS_BIND("eglMakeCurrent",trace_current),
-    GRAPHICS_BIND("eglQueryString",eglQueryString), GRAPHICS_BIND("eglQuerySurface",eglQuerySurface),
-    GRAPHICS_BIND("eglSwapBuffers",eglSwapBuffers), GRAPHICS_BIND("eglSwapInterval",eglSwapInterval),
+    GRAPHICS_BIND("eglQueryString",eglQueryString), GRAPHICS_BIND("eglQuerySurface",guest_query_surface),
+    GRAPHICS_BIND("eglSwapBuffers",trace_swap), GRAPHICS_BIND("eglSwapInterval",eglSwapInterval),
     GRAPHICS_BIND("eglTerminate",eglTerminate), GRAPHICS_BIND("eglBindAPI",eglBindAPI),
     GRAPHICS_BIND("eglGetCurrentDisplay",eglGetCurrentDisplay), GRAPHICS_BIND("eglQueryContext",eglQueryContext)
 };
@@ -125,6 +178,8 @@ int android_graphics_selftest(FILE *log) {
     if (display==EGL_NO_DISPLAY || saved==EGL_NO_CONTEXT) { fprintf(log,"EGL_STEP current_context FAIL display=%p context=%p error=%x\n",display,saved,eglGetError()); return -1; }
     EGL_CHECK(guest_get_proc("ANativeWindow_getWidth")!=(__eglMustCastToProperFunctionPointerType)window_width);
     EGL_CHECK(guest_get_proc("eglGetProcAddress")!=(__eglMustCastToProperFunctionPointerType)guest_get_proc);
+    EGL_CHECK(guest_get_proc("eglQuerySurface")!=(__eglMustCastToProperFunctionPointerType)guest_query_surface);
+    EGL_CHECK(guest_get_proc("eglDestroySurface")!=(__eglMustCastToProperFunctionPointerType)guest_destroy_surface);
     EGL_CHECK(guest_get_proc("glClear")==NULL || guest_get_proc("eglUnknownAndroidExtension")!=NULL);
     EGL_CHECK(window_width(nwindowGetDefault())<=0 || window_height(nwindowGetDefault())<=0);
     EGL_CHECK(!eglQueryContext(display,saved,EGL_CONFIG_ID,&config_id));

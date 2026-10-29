@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <stdio.h>
 void runtime_services_init(FILE *log);
+void runtime_io_set_executable_path(const char *path);
 uintptr_t runtime_services_resolve(const char *name);
 uintptr_t runtime_io_resolve(const char *name);
 int runtime_io_selftest(FILE *log);

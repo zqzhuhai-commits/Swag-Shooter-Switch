@@ -1,0 +1,14 @@
+{
+  "version": "0.14.20",
+  "artifact": "swag-switch-stage14.20-gc-storage.nro",
+  "bytes": 450725781,
+  "sha256": "014255a8c5eb936bdd0649c164adc02004c176f6e0c22cfb28a2aa0fa1736907",
+  "local_build": "PASS",
+  "embedded_files_verified": 1863,
+  "runtime_hardware_validation": "PENDING",
+  "game_screen_confirmed": false,
+  "previous_device_version": "0.14.19",
+  "previous_stop": "GC_BRIDGE_ABORT paused_thread_holds_shim_lock",
+  "previous_scene_loading": "level1 split resources observed",
+  "remaining_observed_exceptions": ["Path is empty", "Language cache DirectoryNotFoundException"]
+}

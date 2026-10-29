@@ -1,0 +1,15 @@
+{
+  "version": "0.14.18",
+  "artifact": "swag-switch-stage14.18-looper.nro",
+  "bytes": 450725781,
+  "sha256": "209bb09c50f01f22adb19f3ad3ad69d18b8262c933268466c61c8c618ca79330",
+  "local_build": "PASS",
+  "embedded_files_verified": 1863,
+  "runtime_hardware_validation": "PENDING",
+  "game_screen_confirmed": false,
+  "previous_device_version": "0.14.17",
+  "previous_screen": "black, user confirmed",
+  "previous_presentation_result": 1,
+  "previous_last_phase": "HandlerThread message queued",
+  "remaining_observed_exception": "ArgumentException: Path is empty"
+}

@@ -1,0 +1,15 @@
+{
+  "version": "0.14.23",
+  "artifact": "swag-switch-stage14.23-touch-menu.nro",
+  "bytes": 450733973,
+  "sha256": "2eadc25b00db84fb36b228dd98fff988f776a78c37163d723687888bfc19ccc9",
+  "local_build": "PASS",
+  "embedded_files_verified": 1863,
+  "new_runtime_hardware_validation": "PENDING",
+  "previous_device_version": "0.14.22",
+  "previous_game_intro_and_menu": "CONFIRMED_BY_USER",
+  "previous_input": "unresponsive, user confirmed",
+  "touch_support": "single pointer, hardware validation pending",
+  "controller_support": "menu navigation only, hardware validation pending",
+  "full_combat_mapping": "INCOMPLETE"
+}

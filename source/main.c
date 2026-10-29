@@ -27,6 +27,12 @@ typedef struct { AndroidElf modules[3]; size_t count; } ModuleSet;
 extern void crash_trace_init(FILE *);
 extern void crash_trace_module(unsigned,uintptr_t,size_t);
 static unsigned batch_stop;
+static unsigned engine_watchdog_mode;
+static u64 engine_progress_tick;
+void startup_engine_progress(void) {
+    __atomic_store_n(&engine_progress_tick,armGetSystemTick(),__ATOMIC_RELEASE);
+    __atomic_store_n(&engine_watchdog_mode,1,__ATOMIC_RELEASE);
+}
 static uintptr_t debug_bases[3]; static size_t debug_sizes[3];
 extern unsigned guest_thread_debug_snapshot(Handle *,uintptr_t *,unsigned);
 static void print_pc(FILE *log,const char *kind,uintptr_t pc) {
@@ -61,11 +67,18 @@ static void terminal_thread_snapshot(FILE *log) {
 }
 static void batch_watchdog(void *arg) {
     FILE *log = arg;
-    for (unsigned i = 0; i < 1200; ++i) {
+    u64 begin=armGetSystemTick();
+    for (;;) {
         if (__atomic_load_n(&batch_stop, __ATOMIC_ACQUIRE)) return;
+        unsigned engine=__atomic_load_n(&engine_watchdog_mode,__ATOMIC_ACQUIRE);
+        u64 since=engine ? __atomic_load_n(&engine_progress_tick,__ATOMIC_ACQUIRE) : begin;
+        u64 seconds=(armGetSystemTick()-since)/19200000;
+        if(seconds>=(engine ? 300u : 120u)) {
+            fprintf(log,"BATCH_WATCHDOG_ABORT mode=%s idle_seconds=%llu; retain preceding phase markers\n",engine ? "engine_no_main_thread_progress" : "preflight",(unsigned long long)seconds);
+            break;
+        }
         svcSleepThread(100000000);
     }
-    fprintf(log, "BATCH_WATCHDOG_ABORT after=120s; retain preceding phase markers\n");
     fflush(log); terminal_thread_snapshot(log); svcExitProcess();
 }
 static uintptr_t resolve_module(void *ctx, const char *name) {
@@ -85,9 +98,9 @@ static uintptr_t resolve_module(void *ctx, const char *name) {
 }
 static int fixture_batch(FILE *log) { return loader_selftest(log, 1); }
 int main(int argc, char **argv) {
-    (void)argc; (void)argv;
+    runtime_io_set_executable_path(argc>0 ? argv[0] : NULL);
     consoleInit(NULL);
-    printf("SWAG Switch - compatibility bring-up 0.14.10\n");
+    printf("SWAG Switch - compatibility bring-up 0.14.23\n");
     printf("This build probes the Android loader; gameplay is not started.\n\n");
     FILE *log = fopen("sdmc:/switch/swag-switch.log", "w");
     if (!log) log = stdout;
@@ -101,7 +114,7 @@ int main(int argc, char **argv) {
         if (R_SUCCEEDED(watcher_rc)) watcher_running = 1;
         else threadClose(&batch_watcher);
     }
-    fprintf(log, "SWAG-NX v0.14.10 lazy-memory; applet=%u own-process=%x\n",
+    fprintf(log, "SWAG-NX v0.14.23 lazy-memory; applet=%u own-process=%x\n",
             (unsigned)appletGetAppletType(), envGetOwnProcessHandle());
     runtime_services_init(log); guest_memory_set_log(log); startup_log(log); android_graphics_set_log(log);
     guest_system_set_log(log); unity_host_set_log(log);
@@ -183,6 +196,7 @@ int main(int argc, char **argv) {
      * return invented values. A trap-filled image is not a completed port. */
     if (!failed && set.count==3 && memory_ok && threads_ok && tls_ok && io_ok && system_ok && jni_profile_ok) {
         fprintf(log,"ENGINE_START_ATTEMPT diagnostic_traps=1 game_running=0\n"); fflush(log);
+        startup_engine_progress();
         for(size_t i=0;i<3;++i) {
             if(!set.modules[i].published && nx_memory_publish(&memory[i],&set.modules[i],log)) svcExitProcess();
         }
@@ -190,14 +204,17 @@ int main(int argc, char **argv) {
         for(size_t i=0;i<2;++i) {
             fprintf(log,"ENGINE_CONSTRUCTORS_BEGIN module=%s\n",names[i]); fflush(log);
             if(elf_run_initializers(&set.modules[i],log)) svcExitProcess();
+            startup_engine_progress();
         }
         void *vm,*env; unity_host_get_vm(&vm,&env); (void)env;
         if(gc_bridge_bind(&set.modules[1],log)) { fprintf(log,"GC_BRIDGE_BIND_FAILED\n"); fflush(log); svcExitProcess(); }
         fprintf(log,"ENGINE_UNITY_ONLOAD_BEGIN\n"); fflush(log);
         int version=unity_host_call_onload(elf_export(&set.modules[0],"JNI_OnLoad"),vm,log);
         fprintf(log,"ENGINE_UNITY_ONLOAD_END version=%x\n",version); fflush(log);
+        startup_engine_progress();
         if(version==0x10006) {
             consoleExit(NULL);
+            unity_host_set_il2cpp(&set.modules[1]);
             int lifecycle=unity_host_run(log);
             fprintf(log,"ENGINE_LIFECYCLE_RETURN result=%d visual_confirmation=REQUIRED\n",lifecycle); fflush(log);
         }

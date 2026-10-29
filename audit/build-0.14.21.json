@@ -1,0 +1,14 @@
+{
+  "version": "0.14.21",
+  "artifact": "swag-switch-stage14.21-surface-jni.nro",
+  "bytes": 450725781,
+  "sha256": "61c1cc5be2c0d3db6649540d1cd1d1237011362602acc0143f62e035a219525f",
+  "local_build": "PASS",
+  "embedded_files_verified": 1863,
+  "runtime_hardware_validation": "PENDING",
+  "game_screen_confirmed": false,
+  "previous_device_version": "0.14.20",
+  "previous_gc_retry_resumed": true,
+  "previous_stop": "JNI_UNSUPPORTED slot=143, CancelNotification(I)V",
+  "previous_graphics_error": "RenderTexture.Create width and height must be larger than 0"
+}
