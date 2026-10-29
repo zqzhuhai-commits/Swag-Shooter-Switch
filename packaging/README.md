@@ -1,6 +1,6 @@
 # 单文件原生NSP构建
 
-当前版本0.14.34，名称绝地精英，作者Xiao Fan，应用ID `01AF534741470000`。这是含全部资源的原生NSO NSP，不是指向SD卡NRO的快捷方式。需要可安装并启动自制NSP的Atmosphère环境。成品的安装/运行尚待设备测试。
+当前版本0.14.34，名称绝地精英，作者Xiao Fan，应用ID `01AF534741470000`。这是含全部资源的原生NSO NSP，不是指向SD卡NRO的快捷方式。需要可安装并启动自制NSP的Atmosphère环境。0.14.34-fix1修复原生NSP启动句柄初始化；功能修复已由用户确认可进入游戏。
 
 ## 输入与命令
 
@@ -16,7 +16,7 @@ python tools/verify_nsp.py "../绝地精英 [01AF534741470000][0.14.34].nsp" --k
 
 ## 启动适配
 
-libnx原生NSO启动不带NRO的ProcessHandle配置项；`native_process.c`在需要时执行本进程HIPC复制句柄握手，再以两个句柄查询PID比较，提供给安卓ELF加载和数据映射。NRO继续使用原有句柄。设计参考switchbrew/nx-hbloader，许可见third_party。NPDM使用Application类型和39位地址空间，允许游戏所需代码映射SVC；仅核实了包内元数据，内核实机行为待确认。
+libnx原生NSO启动不带NRO的ProcessHandle配置项；`native_process.c`在需要时调用Atmosphère/Mesosphere的`svcGetInfo(..., 65001, INVALID_HANDLE, 0)`获取真实自身句柄，再以两个句柄查询PID比较，提供给安卓ELF加载和数据映射。此前本地HIPC会话方案在实机`svcCreateSession`返回`0x10801`，因此移除。NRO继续使用原有句柄。旧HIPC参考代码的许可继续保留于third_party。NPDM使用Application类型和39位地址空间，允许游戏所需代码映射SVC；句柄修复路径已通过用户实机启动验证；不支持该Mesosphere接口时明确返回错误。
 
 ## 验证与来源
 

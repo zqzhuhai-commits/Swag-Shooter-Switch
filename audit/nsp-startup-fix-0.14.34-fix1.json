@@ -1,0 +1,23 @@
+{
+  "file": "绝地精英 [01AF534741470000][0.14.34]-启动修复版.nsp",
+  "bytes": 449595096,
+  "sha256": "5023d55045b999b524a1cd621618d424edf9ea467b3d85d890da5a0979c27f70",
+  "title_id": "01AF534741470000",
+  "version": "0.14.34",
+  "changed_code_bytes": 48,
+  "new_build_id": "763e7f9f683ebc9a6603db47038549c14538476a000000000000000000000000",
+  "checks": [
+    "NSO three original segment hashes verified",
+    "patched text matches successful hardware-tested functional patch",
+    "NSO patched segment round trip verified",
+    "program and metadata hierarchical SHA256 verified",
+    "CNMT content hash and digest verified",
+    "final NCA filenames match SHA256 content IDs",
+    "game ROMFS unchanged",
+    "NPDM unchanged",
+    "control NCA unchanged"
+  ],
+  "hardware_status": "User confirmed game entry with functional patch; release NSP embeds the identical 48-byte fix. No claim of a fresh full-source build or exhaustive gameplay verification.",
+  "release_tag": "v0.14.34-fix1",
+  "apk_resource_update_included": false
+}
