@@ -28,6 +28,7 @@
 #include "huntdown_display.h"
 #include "nx_jni.h"
 #include "util.h"
+#include <errno.h>
 
 #define JNI_VTABLE_SIZE 512
 
@@ -89,12 +90,21 @@ typedef struct {
 static hd_storage_stats hd_query_storage(void) {
   hd_storage_stats result = {4096, 0, 0, 0};
   struct statvfs info;
-  if (statvfs(hd_game_dir(), &info) != 0) return result;
+  char save_root[1024];
+  if (hd_game_path(save_root,sizeof save_root,"userdata") != 0) return result;
+  if (statvfs(save_root, &info) != 0) {
+    debugPrintf("STORAGE_QUERY_FAIL path=%s native_errno=%d\n",save_root,errno);
+    return result;
+  }
   result.block_size = info.f_frsize ? info.f_frsize
                                     : (info.f_bsize ? info.f_bsize : 4096);
   result.available_blocks = info.f_bavail;
   result.free_blocks = info.f_bfree;
   result.total_blocks = info.f_blocks;
+  debugPrintf("STORAGE_QUERY path=%s block=%llu available_bytes=%llu total_bytes=%llu\n",save_root,
+      (unsigned long long)result.block_size,
+      (unsigned long long)(result.available_blocks*result.block_size),
+      (unsigned long long)(result.total_blocks*result.block_size));
   return result;
 }
 
@@ -732,7 +742,37 @@ static nx_jval nx_call_a(void *env, void *obj, void *method_id,
   return nx_id ? nx_dispatch(&g_nx_config, env, obj, nx_id, NULL, args)
                : nx_none();
 }
+typedef struct { void *object,*field; nx_jval value; } StoredField;
+static StoredField stored_fields[1024]; static unsigned stored_field_count;
+static pthread_mutex_t stored_field_lock=PTHREAD_MUTEX_INITIALIZER;
+static int stored_field_read(void *object,void *field,nx_jval *value) {
+    int found=0; pthread_mutex_lock(&stored_field_lock);
+    for(unsigned i=0;i<stored_field_count;++i) if(stored_fields[i].object==object && stored_fields[i].field==field) { *value=stored_fields[i].value; found=1; break; }
+    pthread_mutex_unlock(&stored_field_lock); return found;
+}
+static void stored_field_write(void *object,void *field,nx_jval value) {
+    pthread_mutex_lock(&stored_field_lock); unsigned i=0;
+    while(i<stored_field_count && (stored_fields[i].object!=object || stored_fields[i].field!=field)) ++i;
+    if(i==1024) { pthread_mutex_unlock(&stored_field_lock); extern void unity_jni_unsupported(unsigned) __attribute__((noreturn)); unity_jni_unsupported(109); }
+    if(i==stored_field_count) ++stored_field_count;
+    stored_fields[i]=(StoredField){object,field,value}; pthread_mutex_unlock(&stored_field_lock);
+    debugPrintf("JNI_FIELD_WRITE object=%p field=%p\n",object,field);
+}
+#define FIELD_ACCESS(Name,Type,Member) \
+static void jni_Set##Name##Field(void *env,void *object,void *field,Type value) { (void)env; nx_jval v={0}; v.Member=value; stored_field_write(object,field,v); } \
+static Type jni_StoredGet##Name##Field(void *env,void *object,void *field) { (void)env; nx_jval v={0}; stored_field_read(object,field,&v); return v.Member; }
+FIELD_ACCESS(Object,void *,l)
+FIELD_ACCESS(Boolean,unsigned char,i)
+FIELD_ACCESS(Byte,signed char,i)
+FIELD_ACCESS(Char,unsigned short,i)
+FIELD_ACCESS(Short,short,i)
+FIELD_ACCESS(Int,int,i)
+FIELD_ACCESS(Long,int64_t,j)
+FIELD_ACCESS(Float,float,f)
+FIELD_ACCESS(Double,double,d)
+#undef FIELD_ACCESS
 static nx_jval nx_get_field(void *env, void *obj, void *field_id) {
+  nx_jval stored; if(stored_field_read(obj,field_id,&stored)) return stored;
   void *nx_id = mid_nx_id(field_id, 1);
   return nx_id ? nx_dispatch_field(&g_nx_config, env, obj, nx_id)
                : nx_none();
@@ -1225,6 +1265,7 @@ static void *jni_ToReflectedMethod(void *env, void *clazz, void *method,
 }
 
 static void *jni_GetObjectField(void *env, void *obj, void *fieldID) {
+  nx_jval stored; if(stored_field_read(obj,fieldID,&stored)) return stored.l;
   (void)env; (void)obj;
   const char *nm = mid_name(fieldID);
   /* Install-time Play Asset Delivery packs are reported by Android in
@@ -1260,6 +1301,7 @@ static void *jni_GetObjectField(void *env, void *obj, void *fieldID) {
 
 /* GetIntField (idx 100): DisplayMetrics widthPixels/heightPixels/densityDpi. */
 static jint jni_GetIntField(void *env, void *obj, void *fieldID) {
+  nx_jval stored; if(stored_field_read(obj,fieldID,&stored)) return stored.i;
   (void)env; (void)obj;
   const char *nm = mid_name(fieldID);
   if (nm) {
@@ -1275,6 +1317,7 @@ static jint jni_GetIntField(void *env, void *obj, void *fieldID) {
 /* GetFloatField (idx 102): DisplayMetrics density/xdpi/ydpi/scaledDensity.
    density/xdpi=0.0 -> divisão por zero / DPI inválido no engine -> loop de getMetrics. */
 static float jni_GetFloatField(void *env, void *obj, void *fieldID) {
+  nx_jval stored; if(stored_field_read(obj,fieldID,&stored)) return stored.f;
   (void)env; (void)obj;
   const char *nm = mid_name(fieldID);
   if (nm) {
@@ -3454,6 +3497,21 @@ void jni_shim_init(void **out_vm, void **out_env) {
   jni_env_ptr = jni_env_vtable;
 
   /* JavaVM vtable */
+  jni_env_vtable[104]=(uintptr_t)jni_SetObjectField;
+  jni_env_vtable[105]=(uintptr_t)jni_SetBooleanField;
+  jni_env_vtable[106]=(uintptr_t)jni_SetByteField;
+  jni_env_vtable[107]=(uintptr_t)jni_SetCharField;
+  jni_env_vtable[108]=(uintptr_t)jni_SetShortField;
+  jni_env_vtable[109]=(uintptr_t)jni_SetIntField;
+  jni_env_vtable[110]=(uintptr_t)jni_SetLongField;
+  jni_env_vtable[111]=(uintptr_t)jni_SetFloatField;
+  jni_env_vtable[112]=(uintptr_t)jni_SetDoubleField;
+  jni_env_vtable[96]=(uintptr_t)jni_StoredGetBooleanField;
+  jni_env_vtable[97]=(uintptr_t)jni_StoredGetByteField;
+  jni_env_vtable[98]=(uintptr_t)jni_StoredGetCharField;
+  jni_env_vtable[99]=(uintptr_t)jni_StoredGetShortField;
+  jni_env_vtable[101]=(uintptr_t)jni_StoredGetLongField;
+  jni_env_vtable[103]=(uintptr_t)jni_StoredGetDoubleField;
   java_vm_vtable[3] = (uintptr_t)vm_DestroyJavaVM;
   java_vm_vtable[4] = (uintptr_t)vm_AttachCurrentThread;
   java_vm_vtable[5] = (uintptr_t)vm_DetachCurrentThread;

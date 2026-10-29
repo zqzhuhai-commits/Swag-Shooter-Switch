@@ -18,11 +18,47 @@
 #include "batch_suite.h"
 #include "android_events.h"
 #include "startup_probe.h"
+#include "gc_bridge.h"
+#include "android_graphics.h"
 
 /* Foreign modules are inventoried and patched, but no constructors/JNI/game
  * code run until the remaining imports and lifecycle semantics are ready. */
 typedef struct { AndroidElf modules[3]; size_t count; } ModuleSet;
+extern void crash_trace_init(FILE *);
+extern void crash_trace_module(unsigned,uintptr_t,size_t);
 static unsigned batch_stop;
+static uintptr_t debug_bases[3]; static size_t debug_sizes[3];
+extern unsigned guest_thread_debug_snapshot(Handle *,uintptr_t *,unsigned);
+static void print_pc(FILE *log,const char *kind,uintptr_t pc) {
+    const char *names[]={"unity","il2cpp","main"};
+    for(unsigned i=0;i<3;++i) if(pc>=debug_bases[i] && pc-debug_bases[i]<debug_sizes[i]) {
+        fprintf(log,"THREAD_ADDRESS kind=%s module=%s offset=%llx\n",kind,names[i],(unsigned long long)(pc-debug_bases[i])); return;
+    }
+    fprintf(log,"THREAD_ADDRESS kind=%s absolute=%llx\n",kind,(unsigned long long)pc);
+}
+static void terminal_thread_snapshot(FILE *log) {
+    Handle handles[17]; uintptr_t ids[17];
+    handles[0]=envGetMainThreadHandle(); ids[0]=0;
+    unsigned count=1+guest_thread_debug_snapshot(handles+1,ids+1,16);
+    for(unsigned i=0;i<count;++i) {
+        ThreadContext context={0}; Result paused=svcSetThreadActivity(handles[i],ThreadActivity_Paused);
+        Result read=R_SUCCEEDED(paused) ? svcGetThreadContext3(&context,handles[i]) : paused;
+        uintptr_t frames[8]={0}; unsigned frame_count=0;
+        if(R_SUCCEEDED(read)) {
+            uintptr_t fp=context.fp;
+            while(frame_count<8 && fp && !(fp&15)) {
+                MemoryInfo info; u32 page;
+                if(R_FAILED(svcQueryMemory(&info,&page,fp)) || !(info.perm&Perm_R) || info.size<16 || fp<info.addr || fp-info.addr>info.size-16) break;
+                uintptr_t *frame=(uintptr_t *)fp; frames[frame_count++]=frame[1];
+                uintptr_t next=frame[0]; if(next<=fp || next-fp>0x100000) break; fp=next;
+            }
+        }
+        Result resumed=R_SUCCEEDED(paused) ? svcSetThreadActivity(handles[i],ThreadActivity_Runnable) : 0;
+        fprintf(log,"THREAD_SNAPSHOT index=%u id=%llx pause=%x context=%x resume=%x sp=%llx\n",i,(unsigned long long)ids[i],paused,read,resumed,(unsigned long long)context.sp);
+        if(R_SUCCEEDED(read)) { fprintf(log,"THREAD_REGISTERS x19=%llx x20=%llx x21=%llx\n",(unsigned long long)context.cpu_gprs[19].x,(unsigned long long)context.cpu_gprs[20].x,(unsigned long long)context.cpu_gprs[21].x); print_pc(log,"pc",context.pc.x); print_pc(log,"lr",context.lr); for(unsigned j=0;j<frame_count;++j) print_pc(log,"frame",frames[j]); }
+        fflush(log);
+    }
+}
 static void batch_watchdog(void *arg) {
     FILE *log = arg;
     for (unsigned i = 0; i < 1200; ++i) {
@@ -30,7 +66,7 @@ static void batch_watchdog(void *arg) {
         svcSleepThread(100000000);
     }
     fprintf(log, "BATCH_WATCHDOG_ABORT after=120s; retain preceding phase markers\n");
-    fflush(log); svcExitProcess();
+    fflush(log); terminal_thread_snapshot(log); svcExitProcess();
 }
 static uintptr_t resolve_module(void *ctx, const char *name) {
     ModuleSet *set = ctx;
@@ -51,11 +87,12 @@ static int fixture_batch(FILE *log) { return loader_selftest(log, 1); }
 int main(int argc, char **argv) {
     (void)argc; (void)argv;
     consoleInit(NULL);
-    printf("SWAG Switch - batch compatibility bring-up 0.10\n");
+    printf("SWAG Switch - compatibility bring-up 0.14.10\n");
     printf("This build probes the Android loader; gameplay is not started.\n\n");
     FILE *log = fopen("sdmc:/switch/swag-switch.log", "w");
     if (!log) log = stdout;
     setvbuf(log, NULL, _IOLBF, 0);
+    crash_trace_init(log);
     Thread batch_watcher;
     int watcher_running = 0;
     Result watcher_rc = threadCreate(&batch_watcher, batch_watchdog, log, NULL, 0x8000, 0x2c, -2);
@@ -64,10 +101,11 @@ int main(int argc, char **argv) {
         if (R_SUCCEEDED(watcher_rc)) watcher_running = 1;
         else threadClose(&batch_watcher);
     }
-    fprintf(log, "SWAG-NX stage12-lifecycle; applet=%u own-process=%x\n",
+    fprintf(log, "SWAG-NX v0.14.10 lazy-memory; applet=%u own-process=%x\n",
             (unsigned)appletGetAppletType(), envGetOwnProcessHandle());
-    runtime_services_init(log); startup_log(log);
+    runtime_services_init(log); guest_memory_set_log(log); startup_log(log); android_graphics_set_log(log);
     guest_system_set_log(log); unity_host_set_log(log);
+    if(android_graphics_prepare(log)) { fprintf(log,"ENGINE_START_BLOCKED graphics_preflight_failed=1\n"); fflush(log); svcExitProcess(); }
     int memory_ok = batch_run("exec_memory", nx_memory_smoke_test, 1, log);
     printf("Executable memory: %s\n", memory_ok ? "PASS" : "FAIL (see log)");
     int basic_ok = bionic_basic_selftest() == 0;
@@ -113,6 +151,8 @@ int main(int argc, char **argv) {
             nx_memory_prepare(&memory[i], size + plans[i].extra_bytes, log) ||
             elf_load(&set.modules[i], path, memory[i].staging, memory[i].size,
                      (uintptr_t)memory[i].execution, log)) { failed = 1; break; }
+        debug_sizes[i]=set.modules[i].size; debug_bases[i]=set.modules[i].bias;
+        crash_trace_module(i,debug_bases[i],debug_sizes[i]);
         ++set.count;
         printf("Loaded %s (%zu KiB)\n", names[i], size / 1024);
         consoleUpdate(NULL);
@@ -152,6 +192,7 @@ int main(int argc, char **argv) {
             if(elf_run_initializers(&set.modules[i],log)) svcExitProcess();
         }
         void *vm,*env; unity_host_get_vm(&vm,&env); (void)env;
+        if(gc_bridge_bind(&set.modules[1],log)) { fprintf(log,"GC_BRIDGE_BIND_FAILED\n"); fflush(log); svcExitProcess(); }
         fprintf(log,"ENGINE_UNITY_ONLOAD_BEGIN\n"); fflush(log);
         int version=unity_host_call_onload(elf_export(&set.modules[0],"JNI_OnLoad"),vm,log);
         fprintf(log,"ENGINE_UNITY_ONLOAD_END version=%x\n",version); fflush(log);

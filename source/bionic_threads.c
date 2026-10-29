@@ -505,3 +505,5 @@ uintptr_t bionic_threads_resolve(const char *name) {
     return 0;
 }
 size_t bionic_threads_count(void) { return sizeof bindings / sizeof *bindings; }
+
+int bionic_gc_locks_free(void) { return __atomic_load_n(&registry_lock,__ATOMIC_ACQUIRE)==0 && __atomic_load_n(&key_table_lock,__ATOMIC_ACQUIRE)==0; }

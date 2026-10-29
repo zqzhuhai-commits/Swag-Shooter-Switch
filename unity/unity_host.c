@@ -58,6 +58,12 @@ int unity_host_bridge_test(AndroidElf *module, FILE *log) {
     void *vm, *env; int errors = 0;
     unity_host_set_log(log); unity_host_get_vm(&vm, &env);
     uintptr_t *table = *(uintptr_t **)env;
+    int field_object, field_id;
+    void (*set_int)(void *,void *,void *,int)=(void (*)(void *,void *,void *,int))table[109];
+    int (*get_int)(void *,void *,void *)=(int (*)(void *,void *,void *))table[100];
+    set_int(env,&field_object,&field_id,12345); errors+=get_int(env,&field_object,&field_id)!=12345;
+    fprintf(log,"JNI_FIELD_ROUNDTRIP errors=%d set_index=109 get_index=100\n",errors);
+
     unsigned char (*exception_check)(void *)=(unsigned char (*)(void *))table[228];
     errors+=exception_check(env)!=0;
     fprintf(log,"JNI_EXCEPTION_SLOT_TEST index=228 errors=%d\n",errors);

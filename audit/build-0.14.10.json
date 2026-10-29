@@ -1,0 +1,15 @@
+{
+  "version": "0.14.10",
+  "artifact": "swag-switch-stage14.10-lazy-memory.nro",
+  "bytes": 450709397,
+  "sha256": "e0d1987729baee5bfd844cb57c7e965f432e537dd98073cba746f7001ff77705",
+  "local_build": "PASS",
+  "embedded_files_verified": 1863,
+  "new_runtime_hardware_validation": "PENDING",
+  "game_screen_confirmed": false,
+  "previous_device_version": "0.14.9",
+  "previous_mixed_sequence_errors": 0,
+  "previous_unity_sequence_errors": 0,
+  "previous_engine_result": "ENOMEM then Unity offset 0x408b68 writes 0x8",
+  "upload_scope": "source and validation records; game assets and NRO excluded"
+}

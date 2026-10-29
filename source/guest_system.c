@@ -17,7 +17,14 @@
 #include <pthread.h>
 #include <poll.h>
 #include <setjmp.h>
+#include "gc_bridge.h"
+#include "guest_futex.h"
 extern char **environ;
+extern void crash_trace_terminal(const char *,int);
+static void __attribute__((noreturn)) guest_abort(void) { crash_trace_terminal("abort",0); abort(); }
+static void __attribute__((noreturn)) guest_exit(int status) { crash_trace_terminal("exit",status); exit(status); }
+static void __attribute__((noreturn)) guest_immediate_exit(int status) { crash_trace_terminal("_exit",status); _exit(status); }
+
 static FILE *system_log;
 /* The guest system profile advertises UTC. Keep libc's calendar conversion
  * and formatted timezone consistent with that profile. */
@@ -506,6 +513,7 @@ static int guest_sigaction(int signal,const GuestSignalAction *action,GuestSigna
     /* There is no POSIX asynchronous signal-delivery backend on Switch.
      * Report the default disposition, but reject installing callbacks rather
      * than pretending that crash handlers can be delivered. */
+    if(action && gc_bridge_accept_signal(signal,action->handler)) { if(old) memset(old,0,sizeof *old); return 0; }
     if(action && (action->handler || action->flags || action->mask || action->restorer)) {
         fprintf(system_log ? system_log : stderr,"SIGNAL_ACTION_UNSUPPORTED signal=%d flags=%x handler=%p delivery=UNAVAILABLE\n",signal,(unsigned)action->flags,(void *)action->handler);
         *bionic_errno_ptr()=95; return -1;
@@ -543,9 +551,110 @@ static int jump_context_selftest(FILE *log) {
     fprintf(log,"JUMP_CONTEXT_DONE errors=%d native_bytes=%zu guest_capacity=256 return_37_and_zero=CHECKED async_signal_masks=UNAVAILABLE\n",errors,sizeof(jmp_buf));
     return errors;
 }
+static _Thread_local char logical_thread_name[16]="swag";
+static int guest_prctl(int operation,...) {
+    va_list args; va_start(args,operation); int result=0;
+    if(operation==15) {
+        const char *name=va_arg(args,const char *);
+        if(!name) { *bionic_errno_ptr()=14; result=-1; }
+        else { size_t n=strnlen(name,15); memcpy(logical_thread_name,name,n); logical_thread_name[n]=0; }
+    } else if(operation==16) {
+        char *name=va_arg(args,char *);
+        if(!name) { *bionic_errno_ptr()=14; result=-1; }
+        else { memset(name,0,16); memcpy(name,logical_thread_name,strlen(logical_thread_name)); }
+    } else if(operation==3) {
+        result=0; /* Process dumps are unavailable in this runtime profile. */
+    } else if(operation==4) {
+        unsigned long enabled=va_arg(args,unsigned long);
+        if(enabled) { *bionic_errno_ptr()=95; result=-1; }
+    } else { *bionic_errno_ptr()=22; result=-1; }
+    va_end(args);
+    fprintf(system_log ? system_log : stderr,"PRCTL_PROFILE operation=%d result=%d thread_name=%s host_thread_rename=0\n",operation,result,logical_thread_name);
+    return result;
+}
+static int prctl_selftest(FILE *log) {
+    char original[16],actual[16]; guest_prctl(16,original);
+    int errors=guest_prctl(15,"UnityMain")!=0 || guest_prctl(16,actual)!=0 || strcmp(actual,"UnityMain");
+    errors+=guest_prctl(15,"0123456789abcdefghi")!=0 || guest_prctl(16,actual)!=0 || strcmp(actual,"0123456789abcde");
+    errors+=guest_prctl(-1)!=-1 || *bionic_errno_ptr()!=22;
+    guest_prctl(15,original);
+    fprintf(log,"PRCTL_TEST_DONE errors=%d logical_thread_names=CHECKED truncation=CHECKED\n",errors); return errors;
+}
+typedef struct { void *base; int32_t flags,padding; size_t bytes; } GuestSignalStack;
+_Static_assert(sizeof(GuestSignalStack)==24 && offsetof(GuestSignalStack,bytes)==16,"Bionic arm64 stack_t");
+static int guest_sigaltstack(const GuestSignalStack *request,GuestSignalStack *previous) {
+    if(request && request->flags!=2) {
+        fprintf(system_log ? system_log : stderr,"SIGNAL_STACK_UNSUPPORTED flags=%x bytes=%zu async_delivery=UNAVAILABLE\n",(unsigned)request->flags,request->bytes);
+        *bionic_errno_ptr()=request->flags==0 ? 95 : 22; return -1;
+    }
+    if(previous) *previous=(GuestSignalStack){.flags=2};
+    fprintf(system_log ? system_log : stderr,"SIGNAL_STACK_DISABLED query=%d\n",request==NULL); return 0;
+}
+static int signal_stack_selftest(FILE *log) {
+    struct { uint64_t before; GuestSignalStack stack; uint64_t after; } guarded={0x12345678,{0},0x87654321};
+    int errors=guest_sigaltstack(NULL,&guarded.stack)!=0 || guarded.stack.flags!=2 || guarded.stack.base!=NULL || guarded.stack.bytes!=0;
+    GuestSignalStack disabled={.flags=2}; errors+=guest_sigaltstack(&disabled,NULL)!=0;
+    GuestSignalStack unsupported={.bytes=32768}; errors+=guest_sigaltstack(&unsupported,NULL)!=-1 || *bionic_errno_ptr()!=95;
+    errors+=guarded.before!=0x12345678 || guarded.after!=0x87654321;
+    fprintf(log,"SIGNAL_STACK_TEST_DONE errors=%d disabled_query=CHECKED install=UNSUPPORTED\n",errors); return errors;
+}
+/* Linux arm64 syscall numbers. Never forward these numbers to Horizon SVCs. */
+static long guest_syscall(long number,...) {
+    static unsigned traced; long result=-1; va_list args; va_start(args,number);
+    switch(number) {
+    case 98: {
+        uint32_t *address=va_arg(args,uint32_t *); int operation=va_arg(args,int); int value=va_arg(args,int);
+        const struct timespec *timeout=NULL; uint32_t mask=0;
+        if((operation&127)==0 || (operation&127)==9) timeout=va_arg(args,const struct timespec *);
+        if((operation&127)==9) { (void)va_arg(args,void *); mask=va_arg(args,uint32_t); }
+        result=guest_futex(address,operation,value,timeout,mask); break;
+    }
+    case 178: result=b_gettid(); break;
+    case 172: result=getpid(); break;
+    case 174: case 175: result=guest_uid(); break;
+    case 124: svcSleepThread(YieldType_ToAnyThread); result=0; break;
+    case 123: {
+        int pid=va_arg(args,int); size_t bytes=va_arg(args,size_t); void *mask=va_arg(args,void *);
+        if(pid!=0 && pid!=getpid() && pid!=b_gettid()) { *bionic_errno_ptr()=3; break; }
+        if(!mask || bytes<8 || bytes>4096) { *bionic_errno_ptr()=22; break; }
+        u64 cores=0;
+        if(R_FAILED(svcGetInfo(&cores,InfoType_CoreMask,CUR_PROCESS_HANDLE,0))) { *bionic_errno_ptr()=5; break; }
+        memset(mask,0,bytes); memcpy(mask,&cores,8); result=8; break;
+    }
+    default: *bionic_errno_ptr()=38; break;
+    }
+    va_end(args);
+    if(result<0 || __atomic_fetch_add(&traced,1,__ATOMIC_RELAXED)<64)
+        fprintf(system_log ? system_log : stderr,"LINUX_SYSCALL number=%ld result=%ld guest_errno=%d\n",number,result,result<0 ? *bionic_errno_ptr() : 0);
+    return result;
+}
+static int syscall_selftest(FILE *log) {
+    int errors=guest_syscall(178)!=b_gettid() || guest_syscall(172)!=getpid() || guest_syscall(174)!=guest_uid();
+    uint64_t cores=0; errors+=guest_syscall(123,0,(size_t)8,&cores)!=8 || !cores;
+    fprintf(log,"SYSCALL_PROFILE_DONE errors=%d thread_id_and_affinity=CHECKED unknown_calls=ENOSYS\n",errors); return errors;
+}
+static int guest_getpriority(int which,unsigned who) {
+    if(which!=0) { *bionic_errno_ptr()=95; return -1; }
+    if(who && who!=(unsigned)b_gettid()) { *bionic_errno_ptr()=3; return -1; }
+    s32 priority; if(R_FAILED(svcGetThreadPriority(&priority,CUR_THREAD_HANDLE))) { *bionic_errno_ptr()=5; return -1; }
+    int nice=priority-0x2c; return nice<-20 ? -20 : nice>19 ? 19 : nice;
+}
+static int guest_setpriority(int which,unsigned who,int nice) {
+    if(which!=0) { *bionic_errno_ptr()=95; return -1; }
+    if(who && who!=(unsigned)b_gettid()) { *bionic_errno_ptr()=3; return -1; }
+    if(nice<-20) nice=-20;
+    if(nice>19) nice=19;
+    if(R_FAILED(svcSetThreadPriority(CUR_THREAD_HANDLE,(u32)(0x2c+nice)))) { *bionic_errno_ptr()=1; return -1; }
+    return 0;
+}
 typedef struct { const char *name; uintptr_t address; } SystemBinding;
 #define SYS_BIND(name, fn) {name, (uintptr_t)(fn)}
 static const SystemBinding bindings[] = {
+    SYS_BIND("getpriority", guest_getpriority), SYS_BIND("setpriority", guest_setpriority),
+    SYS_BIND("syscall", guest_syscall),
+    SYS_BIND("pthread_kill", gc_bridge_kill), SYS_BIND("pthread_sigmask", gc_bridge_sigmask),
+    SYS_BIND("sigaltstack", guest_sigaltstack),
+    SYS_BIND("prctl", guest_prctl),
     SYS_BIND("setjmp", setjmp), SYS_BIND("longjmp", longjmp),
     SYS_BIND("sigaction", guest_sigaction),
     SYS_BIND("poll", guest_poll),
@@ -572,7 +681,7 @@ static const SystemBinding bindings[] = {
     SYS_BIND("gmtime", b_gmtime), SYS_BIND("gmtime_r", b_gmtime_r),
     SYS_BIND("localtime", b_gmtime), SYS_BIND("localtime_r", b_gmtime_r),
     SYS_BIND("mktime", b_mktime), SYS_BIND("strftime", b_strftime),
-    SYS_BIND("abort", abort), SYS_BIND("exit", exit), SYS_BIND("_exit", _exit), SYS_BIND("usleep", usleep)
+    SYS_BIND("abort", guest_abort), SYS_BIND("exit", guest_exit), SYS_BIND("_exit", guest_immediate_exit), SYS_BIND("usleep", usleep)
 };
 uintptr_t guest_system_resolve(const char *name) {
     for (size_t i = 0; i < sizeof bindings / sizeof *bindings; ++i)
@@ -580,7 +689,7 @@ uintptr_t guest_system_resolve(const char *name) {
     return 0;
 }
 int guest_system_selftest(FILE *log) {
-    int errors = profile_selftest(log) + network_text_selftest(log) + signal_set_selftest(log) + user_profile_selftest(log) + syslog_selftest(log) + sockaddr_selftest(log) + poll_selftest(log) + sigaction_selftest(log) + jump_context_selftest(log); char value[92], name[32];
+    int errors = profile_selftest(log) + network_text_selftest(log) + signal_set_selftest(log) + user_profile_selftest(log) + syslog_selftest(log) + sockaddr_selftest(log) + poll_selftest(log) + sigaction_selftest(log) + jump_context_selftest(log) + prctl_selftest(log) + signal_stack_selftest(log) + syscall_selftest(log) + guest_futex_selftest(log); char value[92], name[32];
     errors += property_get("ro.build.version.sdk", value) != 2 || strcmp(value, "30");
     const Property *p = property_find("ro.product.model");
     errors += !p || property_read(p, name, value) <= 0 || strcmp(name, "ro.product.model");

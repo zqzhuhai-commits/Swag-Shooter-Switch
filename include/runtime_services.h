@@ -13,3 +13,5 @@ int runtime_platform_selftest(FILE *log);
 int runtime_zlib_selftest(FILE *log);
 int runtime_jni_bootstrap(AndroidElf *elf, FILE *log);
 int64_t runtime_io_read_at(int fd, void *buffer, size_t size, int64_t offset);
+
+int runtime_io_native_fd(int fd);

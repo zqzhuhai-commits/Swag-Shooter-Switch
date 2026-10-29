@@ -231,3 +231,19 @@ int guest_detached_selftest(FILE *log) {
         detached_test.errors, created, detached_test.destructors, android_tls_live_blocks());
     return detached_test.errors ? -1 : 0;
 }
+
+Handle guest_thread_capture_handle(uintptr_t id) {
+    Handle result=0;
+    mutexLock(&thread_lock);
+    GuestThread *thread=find(id);
+    if(thread) result=thread->native.handle;
+    mutexUnlock(&thread_lock); return result;
+}
+int guest_thread_gc_lock_free(void) { return __atomic_load_n(&thread_lock,__ATOMIC_ACQUIRE)==0; }
+
+unsigned guest_thread_debug_snapshot(Handle *handles,uintptr_t *ids,unsigned capacity) {
+    if(!mutexTryLock(&thread_lock)) return 0;
+    unsigned count=0;
+    for(GuestThread *p=threads;p && count<capacity;p=p->next) { handles[count]=p->native.handle; ids[count]=(uintptr_t)p; ++count; }
+    mutexUnlock(&thread_lock); return count;
+}

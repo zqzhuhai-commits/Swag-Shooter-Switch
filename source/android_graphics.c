@@ -4,6 +4,47 @@
 #include <GLES3/gl3.h>
 #include <string.h>
 #include <stdlib.h>
+static FILE *egl_log;
+void android_graphics_set_log(FILE *log) { egl_log=log; }
+static EGLBoolean trace_initialize(EGLDisplay display,EGLint *major,EGLint *minor) {
+    if(egl_log) { fprintf(egl_log,"ENGINE_EGL_BEGIN initialize\n"); fflush(egl_log); }
+    EGLBoolean result=eglInitialize(display,major,minor);
+    if(egl_log) fprintf(egl_log,"ENGINE_EGL_END initialize result=%u\n",result);
+    return result;
+}
+static EGLContext trace_context(EGLDisplay display,EGLConfig config,EGLContext share,const EGLint *attributes) {
+    if(egl_log) { fprintf(egl_log,"ENGINE_EGL_BEGIN context\n"); fflush(egl_log); }
+    EGLContext result=eglCreateContext(display,config,share,attributes);
+    if(egl_log) fprintf(egl_log,"ENGINE_EGL_END context result=%p\n",result);
+    return result;
+}
+static EGLSurface trace_window(EGLDisplay display,EGLConfig config,EGLNativeWindowType window,const EGLint *attributes) {
+    if(egl_log) { fprintf(egl_log,"ENGINE_EGL_BEGIN window native=%p\n",window); fflush(egl_log); }
+    EGLSurface result=eglCreateWindowSurface(display,config,window,attributes);
+    if(egl_log) fprintf(egl_log,"ENGINE_EGL_END window result=%p\n",result);
+    return result;
+}
+static EGLBoolean trace_current(EGLDisplay display,EGLSurface draw,EGLSurface read,EGLContext context) {
+    if(egl_log) { fprintf(egl_log,"ENGINE_EGL_BEGIN make_current\n"); fflush(egl_log); }
+    EGLBoolean result=eglMakeCurrent(display,draw,read,context);
+    if(egl_log) fprintf(egl_log,"ENGINE_EGL_END make_current result=%u\n",result);
+    return result;
+}
+/* Keep an NV reference and initialize the display before loading the Android
+ * engine. Transfer memory must be established before the guest consumes and
+ * remaps large portions of the process heap. Keep it alive until process exit. */
+int android_graphics_prepare(FILE *log) {
+    fprintf(log,"GPU_PREFLIGHT_BEGIN nv_initialize before_guest=1\n"); fflush(log);
+    Result rc=nvInitialize();
+    fprintf(log,"GPU_PREFLIGHT_NV result=%x\n",rc); fflush(log);
+    if(R_FAILED(rc)) return -1;
+    EGLDisplay display=eglGetDisplay(EGL_DEFAULT_DISPLAY);
+    EGLint major=0,minor=0;
+    EGLBoolean initialized=eglInitialize(display,&major,&minor);
+    fprintf(log,"GPU_PREFLIGHT_EGL display=%p result=%u version=%d.%d error=%x retained_until_exit=1\n",
+            display,initialized,major,minor,eglGetError()); fflush(log);
+    return initialized ? 0 : -1;
+}
 /* Single-display backend. A Java Surface is projected onto the default
  * Switch window; Android window objects never cross into Mesa unchanged. */
 static unsigned window_refs;
@@ -48,13 +89,13 @@ static const Binding bindings[]={
     GRAPHICS_BIND("ANativeWindow_fromSurface",window_from_surface), GRAPHICS_BIND("ANativeWindow_acquire",window_acquire),
     GRAPHICS_BIND("ANativeWindow_release",window_release), GRAPHICS_BIND("ANativeWindow_getWidth",window_width),
     GRAPHICS_BIND("ANativeWindow_getHeight",window_height), GRAPHICS_BIND("ANativeWindow_setBuffersGeometry",window_geometry),
-    GRAPHICS_BIND("eglChooseConfig",eglChooseConfig), GRAPHICS_BIND("eglCreateContext",eglCreateContext),
-    GRAPHICS_BIND("eglCreatePbufferSurface",eglCreatePbufferSurface), GRAPHICS_BIND("eglCreateWindowSurface",eglCreateWindowSurface),
+    GRAPHICS_BIND("eglChooseConfig",eglChooseConfig), GRAPHICS_BIND("eglCreateContext",trace_context),
+    GRAPHICS_BIND("eglCreatePbufferSurface",eglCreatePbufferSurface), GRAPHICS_BIND("eglCreateWindowSurface",trace_window),
     GRAPHICS_BIND("eglDestroyContext",eglDestroyContext), GRAPHICS_BIND("eglDestroySurface",eglDestroySurface),
     GRAPHICS_BIND("eglGetConfigAttrib",eglGetConfigAttrib), GRAPHICS_BIND("eglGetCurrentContext",eglGetCurrentContext),
     GRAPHICS_BIND("eglGetCurrentSurface",eglGetCurrentSurface), GRAPHICS_BIND("eglGetDisplay",eglGetDisplay),
     GRAPHICS_BIND("eglGetError",eglGetError), GRAPHICS_BIND("eglGetProcAddress",guest_get_proc),
-    GRAPHICS_BIND("eglInitialize",eglInitialize), GRAPHICS_BIND("eglMakeCurrent",eglMakeCurrent),
+    GRAPHICS_BIND("eglInitialize",trace_initialize), GRAPHICS_BIND("eglMakeCurrent",trace_current),
     GRAPHICS_BIND("eglQueryString",eglQueryString), GRAPHICS_BIND("eglQuerySurface",eglQuerySurface),
     GRAPHICS_BIND("eglSwapBuffers",eglSwapBuffers), GRAPHICS_BIND("eglSwapInterval",eglSwapInterval),
     GRAPHICS_BIND("eglTerminate",eglTerminate), GRAPHICS_BIND("eglBindAPI",eglBindAPI),
