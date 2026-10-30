@@ -1,5 +1,6 @@
 #include "guest_threads.h"
 #include "android_tls.h"
+#include "guest_cpu_policy.h"
 #include <switch.h>
 #include <pthread.h>
 #include <stdlib.h>
@@ -23,6 +24,7 @@ static _Thread_local GuestThread *current;
 static Thread reaper;
 static int reaper_running;
 static unsigned reaped_count;
+static unsigned worker_sequence,affinity_reported;
 static GuestThread *find(uintptr_t id) {
     for (GuestThread *p = threads; p; p = p->next) if ((uintptr_t)p == id) return p;
     return NULL;
@@ -117,8 +119,16 @@ int guest_thread_create(uintptr_t *id, const AndroidThreadAttr *attr, void *(*st
     p->tls = android_tls_allocate();
     if (!p->tls) { free(p); return 12; }
     p->start = start; p->arg = arg; p->detached = detached; p->references = 2;
-    Result rc = threadCreate(&p->native, entry, p, NULL, (size + 4095) & ~(size_t)4095, 0x3b, -2);
+    u64 allowed=0;unsigned mask=0;
+    if(R_SUCCEEDED(svcGetInfo(&allowed,InfoType_CoreMask,CUR_PROCESS_HANDLE,0)))mask=guest_worker_mask((unsigned)allowed);
+    int preferred=guest_worker_core(mask,__atomic_fetch_add(&worker_sequence,1,__ATOMIC_RELAXED));
+    Result rc = threadCreate(&p->native, entry, p, NULL, (size + 4095) & ~(size_t)4095, 0x3b, preferred);
     if (R_FAILED(rc)) { android_tls_discard(p->tls); free(p); return 11; }
+    if(mask) {
+        Result affinity=svcSetThreadCoreMask(p->native.handle,preferred,mask);
+        if(__atomic_fetch_add(&affinity_reported,1,__ATOMIC_RELAXED)==0)
+            fprintf(stderr,"GUEST_WORKER_AFFINITY allowed=%llx requested=%x preferred=%d result=%x\n",(unsigned long long)allowed,mask,preferred,affinity);
+    }
     android_tls_record_owner(p->tls, (uintptr_t)p);
     mutexLock(&thread_lock); p->next = threads; threads = p; mutexUnlock(&thread_lock);
     rc = threadStart(&p->native);

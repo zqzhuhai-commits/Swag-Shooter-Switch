@@ -1,6 +1,11 @@
 import re,subprocess,random,json,struct
 from pathlib import Path
 root=Path(__file__).resolve().parents[1];elf=root/'swag-switch.elf'
+source=(root/'source/ai_profile.c').read_text(encoding='utf-8')
+waits=[int(x) for x in re.search(r'zone_wait_seconds\[\]=\{([^}]+)',source)[1].split(',')]
+shrinks=[int(x) for x in re.search(r'zone_shrink_seconds\[\]=\{([^}]+)',source)[1].split(',')]
+assert waits==[180,120,90,75,60,45] and shrinks==[90,75,60,45,30,30]
+assert sum(waits)+sum(shrinks)==900
 exe='C:/devkitPro/devkitA64/bin/aarch64-none-elf-'
 nm=subprocess.check_output([exe+'nm.exe','-n',str(elf)],text=True)
 syms={m.group(2):int(m.group(1),16) for m in re.finditer(r'^([0-9a-f]+) [A-Za-z] (zone_phase_\w+)$',nm,re.M)}
@@ -12,7 +17,7 @@ for line in dis.splitlines():
  if m:ops.append((m[2],m[3].split('//')[0].strip()))
 assert len(ops)==65, len(ops)
 rng=random.Random(48);cases=0
-for limit in [180,120,90,60,30]:
+for limit in waits:
  for index in [0,1,2,3,4,5,8,100]:
   regs={'x'+str(i):rng.getrandbits(64) for i in range(31)}
   regs.update({'q'+str(i):rng.getrandbits(128) for i in range(32)})
@@ -56,5 +61,5 @@ for limit in [180,120,90,60,30]:
   for r,v in before.items():
    if r not in ['x0','x16','x21','q0']:assert regs[r]==v,(r,hex(regs[r]),hex(v))
   cases+=1
-report={'status':'PASS','bridge_register_stack_datetime_and_float_cases':cases,'wait_seconds':[180,120,90,60,30],'shrink_seconds':[60,45,40,30,30],'hardware_validation':'PENDING'}
-(root/'audit/progressive-zone-0.14.51.json').write_text(json.dumps(report,indent=2));print(report)
+report={'status':'PASS','bridge_register_stack_datetime_and_float_cases':cases,'wait_seconds':waits,'shrink_seconds':shrinks,'six_phase_total_seconds':900,'hardware_validation':'PENDING'}
+(root/'audit/progressive-zone-0.14.58.json').write_text(json.dumps(report,indent=2));print(report)

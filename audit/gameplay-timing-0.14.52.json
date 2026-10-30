@@ -1,0 +1,34 @@
+{
+  "version": "0.14.52",
+  "scene": "level2",
+  "object": 31554,
+  "old_interval_seconds": 60,
+  "interval_seconds": 180,
+  "old_shrink_seconds": 10,
+  "shrink_seconds": 60,
+  "progressive_wait_seconds": [
+    180,
+    120,
+    90,
+    60,
+    30
+  ],
+  "progressive_shrink_seconds": [
+    60,
+    45,
+    40,
+    30,
+    30
+  ],
+  "fallback_percentage_decrement": 15,
+  "runtime_shrink_current_percent": [
+    25,
+    35,
+    40,
+    45,
+    50
+  ],
+  "unrelated_bytes_unchanged": true,
+  "sha256": "2872889765dc017cea3261a6f022327e78635d8074c99f375785efbe2d6dbc90",
+  "device_validation": "PENDING"
+}

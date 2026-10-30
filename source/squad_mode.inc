@@ -4,10 +4,15 @@
 typedef struct {uint32_t player;int registered;} SquadActor;
 static struct {
  uint32_t manager,teams[13],allies[13];
- SquadActor actors[52];SquadRules rules;int ready,reported;
+ SquadActor actors[52];SquadRules rules;int ready,reported,finished,end_blocked;
 } squads;
 static NxModuleMemory squad_trampolines;
 static void *(*squad_spawn_original)(void *,void *);
+static int (*squad_spawn_bots_original)(void *,void *);
+static void (*squad_hud_fill_original)(void *,void *,void *);
+static void (*squad_hud_life_original)(void *,int,void *);
+static void (*squad_hud_alive_original)(void *,int,void *);
+static uint32_t squad_hud;static int squad_hud_count=-1;
 static void (*squad_join_original)(void *,void *,void *);
 static void (*squad_received_original)(void *,int,void *,void *);
 static void (*squad_death_original)(void *,void *,void *);
@@ -19,8 +24,13 @@ static ZoneVector (*squad_spawn_next_original)(void *,int,void *,void *);
 static int (*squad_lives_original)(void *,int,void *);
 static void *(*squad_winners_original)(void *,void *);
 static void *(*squad_losers_original)(void *,void *);
+static void (*squad_end_time_original)(void *,void *);
+static void (*squad_round_end_original)(void *,void *);
+static void (*squad_player_died_original)(void *,void *);
+static int (*squad_local_won_original)(void *,void *);
+static void squad_apply_ranks(void);
 static uint32_t squad_population_data;
-static int squad_population_original,squad_population_changed;
+static int squad_population_original,squad_population_offline_original,squad_population_changed;
 static void *squad_ref(void *object,const char *name) {
  if(!object)return NULL;
  void *f=api.field(api.klass(object),name),*v=NULL;
@@ -86,6 +96,8 @@ static void squad_clear(void) {
   if(squads.teams[i])api.release(squads.teams[i]);
   if(squads.allies[i])api.release(squads.allies[i]);
  }
+ if(squad_hud)api.release(squad_hud);
+ squad_hud=0;squad_hud_count=-1;
  if(squads.manager)api.release(squads.manager);
  memset(&squads,0,sizeof squads);
 }
@@ -103,10 +115,10 @@ static void *squad_int_array(unsigned team,int allies) {
 }
 static void squad_sync_lives(void *manager) {
  for(unsigned id=1;id<=13;++id) {
-  int lives=(int)squad_rules_lives(&squads.rules,id);
+  int lives=(int)squad_rules_present_lives(&squads.rules,id);
   squad_int(squad_team(id),"_teamLifes",&lives,1);
  }
- int enemies=(int)squad_rules_enemy_lives(&squads.rules);
+ int enemies=0;for(unsigned id=2;id<=13;++id)enemies+=(int)squad_rules_present_lives(&squads.rules,id);
  squad_int(squad_ref(manager,"teamTwo"),"_teamLifes",&enemies,1);
 }
 static int squad_ensure(void *manager) {
@@ -200,6 +212,37 @@ static void squad_report(void) {
 static void squad_poll(void) {
  if(!squads.ready || !squad_mode_active())return;
  squad_report();
+ void *hud=squad_hud ? api.target(squad_hud) : NULL;int total=0;
+ for(unsigned id=1;id<=13;++id)total+=(int)squad_rules_present_lives(&squads.rules,id);
+ if(hud && total!=squad_hud_count) {
+  squad_hud_count=total;squad_hud_alive_original(hud,total,NULL);
+ }
+}
+static int squad_allow_finish(const char *entry) {
+ if(!squad_mode_active())return 1;
+ if(squads.ready && squad_rules_can_finish(&squads.rules))return 1;
+ if(output && !squads.end_blocked)fprintf(output,"SQUAD_END_BLOCKED entry=%s registered=%u alive_squads=%u local_lives=%u\n",entry,squads.rules.registered,squad_rules_alive(&squads.rules),squad_rules_lives(&squads.rules,1));
+ squads.end_blocked=1;return 0;
+}
+static void squad_end_time(void *self,void *method) {
+ if(squad_allow_finish("EndRoundTime"))squad_end_time_original(self,method);
+}
+static void squad_round_end(void *self,void *method) {
+ if(!squad_mode_active()) {squad_round_end_original(self,method);return;}
+ if(!squad_allow_finish("OnRoundLimitReachedMethod") || squads.finished)return;
+ squads.finished=1;squad_apply_ranks();
+ if(output)fprintf(output,"SQUAD_FINISH winner=%u local_win=%d alive_squads=%u\n",squad_rules_winner(&squads.rules),squad_rules_winner(&squads.rules)==1,squad_rules_alive(&squads.rules));
+ squad_round_end_original(self,method);
+}
+static void squad_player_died(void *self,void *method) {
+ if(!squad_mode_active()) {squad_player_died_original(self,method);return;}
+ /* The original scans a legacy player list and awards the local player rank 1.
+  * TeamPlayerDied owns the authoritative 52-player roster instead. */
+ if(squads.ready && squad_rules_can_finish(&squads.rules))squad_round_end(self,method);
+}
+static int squad_local_won(void *self,void *method) {
+ if(squad_mode_active())return squads.ready && squad_rules_winner(&squads.rules)==1;
+ return squad_local_won_original(self,method);
 }
 static int squad_register(void *manager,void *player) {
  if(!squad_ensure(manager) || !player)return 0;
@@ -225,6 +268,9 @@ static int squad_register(void *manager,void *player) {
    if(squad_list_change(list,"Add",player) && output)fprintf(output,"SQUAD_AGGREGATE status=FAILED\n");
   }
   squad_update_actor(player,team);
+  int life=!squads.rules.dead[slot];
+  squad_int(player,"noOfLifes",&life,1);
+  void *life_args[]={&life};squad_invoke(player,"SendLifeCount",1,life_args,NULL);
   if(output)fprintf(output,"SQUAD_MEMBER slot=%d team=%u human=%d\n",slot,team,slot==0);
  }
  squad_sync_lives(manager);squad_report();return 1;
@@ -249,28 +295,69 @@ static void squad_begin_new_roster(void) {
  squad_invoke(squad_ref(squad_ref(manager,"teamTwo"),"<PlayerList>k__BackingField"),"Clear",0,NULL,NULL);
  for(unsigned i=0;i<52;++i)if(squads.actors[i].player)api.release(squads.actors[i].player);
  memset(squads.actors,0,sizeof squads.actors);squad_rules_reset(&squads.rules);squads.reported=0;
+ squads.finished=0;squads.end_blocked=0;
  const Spec local_spec={"aalocalPlayerNiTeamChe",2,0};
  void *team=squad_team(1),*f=checked_field(team,&local_spec);unsigned char no=0;
  if(f)api.write(team,f,&no);
  squad_sync_lives(manager);
  if(output)fprintf(output,"SQUAD_NEW_ROSTER slots=52 reserved_human_slot=0\n");
 }
-static void *squad_spawn_players(void *self,void *method) {
- void *data=squad_singleton("hms.countryWar2","DataManager","Instance");int count=0;
- if(data && !squad_int(data,"noOfPlayersOnline",&count,0)) {
-  if(squad_mode_active()) {
-   squad_begin_new_roster();
-   if(!squad_population_changed || api.target(squad_population_data)!=data) {
-    if(squad_population_data)api.release(squad_population_data);
-    squad_population_data=api.weak(data,0);squad_population_original=count;
-   }
-   int bots=51;squad_int(data,"noOfPlayersOnline",&bots,1);squad_population_changed=1;
-   if(output)fprintf(output,"SQUAD_POPULATION bots=51 human=1 previous_bots=%d\n",count);
-  } else if(squad_population_changed && api.target(squad_population_data)==data) {
-   squad_int(data,"noOfPlayersOnline",&squad_population_original,1);squad_population_changed=0;
+/* SpawnBots is a deferred iterator: enforce population at execution time as
+ * well as at creation, after the game's mode setup can overwrite defaults. */
+static void squad_population_apply(void) {
+ void *data=squad_singleton("hms.countryWar2","DataManager","Instance");
+ int online=0,offline=0;
+ if(!data || squad_int(data,"noOfPlayersOnline",&online,0) ||
+    squad_int(data,"noOfAiInOffline",&offline,0))return;
+ if(squad_mode_active()) {
+  if(!squad_population_changed || api.target(squad_population_data)!=data) {
+   if(squad_population_data)api.release(squad_population_data);
+   squad_population_data=api.weak(data,0);
+   squad_population_original=online;squad_population_offline_original=offline;
+   if(output)fprintf(output,"SQUAD_POPULATION bots=51 human=1 old_online=%d old_offline=%d execution_guard=1\n",online,offline);
   }
+  int bots=51;
+  squad_int(data,"noOfPlayersOnline",&bots,1);
+  squad_int(data,"noOfAiInOffline",&bots,1);squad_population_changed=1;
+ } else if(squad_population_changed && api.target(squad_population_data)==data) {
+  squad_int(data,"noOfPlayersOnline",&squad_population_original,1);
+  squad_int(data,"noOfAiInOffline",&squad_population_offline_original,1);
+  squad_population_changed=0;
  }
- return squad_spawn_original(self,method);
+}
+static void *squad_spawn_players(void *self,void *method) {
+ if(squad_mode_active())squad_begin_new_roster();
+ squad_population_apply();return squad_spawn_original(self,method);
+}
+static int squad_spawn_bots(void *self,void *method) {
+ squad_population_apply();return squad_spawn_bots_original(self,method);
+}
+/* This HUD must only bind the local four-person roster, even when an old
+ * two-team callback supplies the all-opponent aggregate. */
+static void squad_hud_fill(void *self,void *list,void *method) {
+ if(squads.ready && squad_mode_active()) {
+  void *local=squad_ref(squad_team(1),"<PlayerList>k__BackingField");
+  if(local)list=local;
+ }
+ squad_hud_fill_original(self,list,method);
+}
+static void squad_hud_life(void *self,int lives,void *method) {
+ if(squads.ready && squad_mode_active()) {
+  int slot=squad_find_player(squad_ref(self,"player"));
+  if(slot>=0 && slot<4)lives=!squads.rules.dead[slot];
+ }
+ squad_hud_life_original(self,lives,method);
+}
+static void squad_hud_alive(void *self,int count,void *method) {
+ if(squads.ready && squad_mode_active()) {
+  if(!squad_hud || api.target(squad_hud)!=self) {
+   if(squad_hud)api.release(squad_hud);
+   squad_hud=api.weak(self,0);
+  }
+  count=0;for(unsigned id=1;id<=13;++id)count+=(int)squad_rules_present_lives(&squads.rules,id);
+  squad_hud_count=count;
+ }
+ squad_hud_alive_original(self,count,method);
 }
 static void squad_join(void *self,void *player,void *method) {
  if(!squad_register(self,player))squad_join_original(self,player,method);
@@ -291,19 +378,23 @@ static void squad_death(void *self,void *player,void *method) {
  /* The original HUD adapter only understands local/all-opponent aggregates.
   * Temporarily adapt the deceased ID on this synchronous main-thread call.
   * TargetScript and all living actors retain their real 13 faction IDs. */
- int local=(int)squad_rules_lives(&squads.rules,1)+(team==1);
- int enemies=(int)squad_rules_enemy_lives(&squads.rules)+(team!=1);
+ int local=(int)squad_rules_present_lives(&squads.rules,1)+(team==1);
+ int enemies=(team!=1);for(unsigned id=2;id<=13;++id)enemies+=(int)squad_rules_present_lives(&squads.rules,id);
  squad_int(squad_ref(self,"teamOne"),"_teamLifes",&local,1);
  squad_int(squad_ref(self,"teamTwo"),"_teamLifes",&enemies,1);
  void *id=squad_ref(player,"playerId");squad_int(id,"_teamId",&native_id,1);
  squad_death_original(self,player,method);
- squad_int(id,"_teamId",&actual,1);squad_sync_lives(self);squad_apply_ranks();
+ squad_int(id,"_teamId",&actual,1);
+ int life=0;squad_int(player,"noOfLifes",&life,1);
+ void *life_args[]={&life};squad_invoke(player,"SendLifeCount",1,life_args,NULL);
+ squad_sync_lives(self);squad_apply_ranks();
  if(output)fprintf(output,"SQUAD_DEATH slot=%d team=%u remaining=%u alive_squads=%u local_lives=%u enemy_lives=%u\n",slot,team,squad_rules_lives(&squads.rules,team),squad_rules_alive(&squads.rules),squad_rules_lives(&squads.rules,1),squad_rules_enemy_lives(&squads.rules));
 }
 static void squad_reset(void *self,void *method) {
  squad_reset_original(self,method);
  if(!squad_ensure(self))return;
  memset(squads.rules.dead,0,sizeof squads.rules.dead);memset(squads.rules.rank,0,sizeof squads.rules.rank);
+ squads.finished=0;squads.end_blocked=0;
  squad_sync_lives(self);
  if(output)fprintf(output,"SQUAD_RESET teams=13 lives_per_team=4\n");
 }
@@ -324,7 +415,7 @@ static void squad_cards(void *self,int id,int lives,void *method) {
  (void)id;(void)lives;squad_sync_lives(self);
 }
 static int squad_lives(void *self,int id,void *method) {
- if(squad_ensure(self))return (int)squad_rules_lives(&squads.rules,(unsigned)id);
+ if(squad_ensure(self))return (int)squad_rules_present_lives(&squads.rules,(unsigned)id);
  return squad_lives_original(self,id,method);
 }
 static ZoneVector squad_spawn_next(void *self,int id,void *player,void *method) {
@@ -338,15 +429,14 @@ static ZoneVector squad_spawn_next(void *self,int id,void *player,void *method) 
  }
  return squad_spawn_next_original(self,id,player,method);
 }
-static unsigned squad_best_alive(void) {
- unsigned best=1,lives=0;
- for(unsigned id=1;id<=13;++id)if(squad_rules_lives(&squads.rules,id)>lives) {
-  best=id;lives=squad_rules_lives(&squads.rules,id);
- }
- return best;
-}
 static void *squad_winners(void *self,void *method) {
- if(squad_ensure(self))return squad_ref(squad_team(squad_best_alive()),"<PlayerList>k__BackingField");
+ if(squad_ensure(self)) {
+  unsigned winner=squad_rules_winner(&squads.rules);
+  /* If our squad is eliminated early, this list is opponents for the loss
+   * screen, not a claim that one of the remaining squads has already won. */
+  void *team=winner ? squad_team(winner) : squad_ref(self,"teamTwo");
+  return squad_ref(team,"<PlayerList>k__BackingField");
+ }
  return squad_winners_original(self,method);
 }
 static void *squad_losers(void *self,void *method) {
@@ -364,6 +454,10 @@ static int squad_prepare(AndroidElf *module,FILE *log) {
  if(!api.object_new || !api.array_new || !api.array_length || !api.corlib || !api.field_offset || !api.barrier || !api.strong || !api.new_string || !api.unbox || !api.class_from_type || !api.assignable)return -1;
  int tested=squad_rules_selftest();fprintf(log,"SQUAD_RULES_SELFTEST result=%d population=52 teams=13\n",tested);if(tested)return -1;
  const SquadHook hooks[]={
+  {0x1796a90,{0xf81d0ff5,0xa9014ff4,0xa9027bfd,0x910083fd},(void *)squad_hud_alive,(void **)&squad_hud_alive_original},
+  {0x15f99a0,{0xfc190fee,0x6d0133ed,0x6d022beb,0x6d0323e9},(void *)squad_spawn_bots,(void **)&squad_spawn_bots_original},
+  {0x1799584,{0xf81a0ffb,0xa90167fa,0xa9025ff8,0xa90357f6},(void *)squad_hud_fill,(void **)&squad_hud_fill_original},
+  {0x198c300,{0xa9bd57f6,0xa9014ff4,0xa9027bfd,0x910083fd},(void *)squad_hud_life,(void **)&squad_hud_life_original},
   {0x19f7600,{0xa9be4ff4,0xa9017bfd,0x910043fd,0xd0008a34},(void *)squad_spawn_players,(void **)&squad_spawn_original},
   {0x1753ce4,{0xa9bd57f6,0xa9014ff4,0xa9027bfd,0x910083fd},(void *)squad_join,(void **)&squad_join_original},
   {0x1753f24,{0xd10103ff,0xa90157f6,0xa9024ff4,0xa9037bfd},(void *)squad_received,(void **)&squad_received_original},
@@ -376,7 +470,11 @@ static int squad_prepare(AndroidElf *module,FILE *log) {
   {0x1754454,{0xf81d0ff5,0xa9014ff4,0xa9027bfd,0x910083fd},(void *)squad_lives,(void **)&squad_lives_original},
   {0x1754528,{0x7100083f,0x540000a0,0x7100043f,0x540000c1},(void *)squad_get_team,NULL},
   {0x1754dec,{0xa9be4ff4,0xa9017bfd,0x910043fd,0x90009f54},(void *)squad_winners,(void **)&squad_winners_original},
-  {0x1754e8c,{0xa9be4ff4,0xa9017bfd,0x910043fd,0x90009f54},(void *)squad_losers,(void **)&squad_losers_original}
+  {0x1754e8c,{0xa9be4ff4,0xa9017bfd,0x910043fd,0x90009f54},(void *)squad_losers,(void **)&squad_losers_original},
+  {0x1694464,{0xa9be4ff4,0xa9017bfd,0x910043fd,0xf000a534},(void *)squad_end_time,(void **)&squad_end_time_original},
+  {0x1688150,{0xd10103ff,0xa90157f6,0xa9024ff4,0xa9037bfd},(void *)squad_round_end,(void **)&squad_round_end_original},
+  {0x168855c,{0xa9bd57f6,0xa9014ff4,0xa9027bfd,0x910083fd},(void *)squad_player_died,(void **)&squad_player_died_original},
+  {0x17548f0,{0xf81e0ff3,0xa9017bfd,0x910043fd,0xaa0003f3},(void *)squad_local_won,(void **)&squad_local_won_original}
  };
  for(unsigned i=0;i<sizeof hooks/sizeof hooks[0];++i)
   if(hooks[i].offset+16>module->size || memcmp(module->image+hooks[i].offset,hooks[i].words,16)) {
@@ -401,5 +499,5 @@ static int squad_prepare(AndroidElf *module,FILE *log) {
  trampoline.ph[0].p_type=PT_LOAD;trampoline.ph[0].p_flags=PF_R|PF_X;trampoline.ph[0].p_memsz=4096;
  if(nx_memory_publish(&squad_trampolines,&trampoline,log))return -1;
  for(unsigned i=0;i<sizeof hooks/sizeof hooks[0];++i)squad_jump(module->image+hooks[i].offset,(uintptr_t)hooks[i].replacement);
- fprintf(log,"SQUAD_HOOKS prepared=13 classic_team=52_players_13_squads device_validation=PENDING\n");return 0;
+ fprintf(log,"SQUAD_HOOKS prepared=21 classic_team=52_players_13_squads guarded_finish=1 device_validation=PENDING\n");return 0;
 }

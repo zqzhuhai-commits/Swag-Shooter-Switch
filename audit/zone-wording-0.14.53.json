@@ -1,0 +1,11 @@
+{
+  "status": "PASS",
+  "localized_terms": {
+    "Restricting the Play Area": "缩小游戏区！",
+    "Restricting play area in 1 Min": "{[VALUE]}分钟后缩小游戏区域！",
+    "Restricting play area in 1 sec": "{[VALUE]}秒后缩小游戏区域！"
+  },
+  "old_wording_remaining": 0,
+  "scene_label_pid": 14040,
+  "device_validation": "PENDING"
+}

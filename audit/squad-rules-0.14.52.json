@@ -1,0 +1,25 @@
+{
+  "status": "PASS",
+  "compiled_arm64_fixture": true,
+  "instructions_executed": 7238243,
+  "human_arrival_orders": 52,
+  "players": 52,
+  "squads": 13,
+  "members_per_squad": 4,
+  "checks": [
+    "roster capacity",
+    "human first/last/every intermediate arrival",
+    "duplicate death ignored",
+    "whole-squad elimination ranks",
+    "last surviving squad wins",
+    "round reset",
+    "production managed-array builder: 13 independent enemy lists and allied lists",
+    "32 survivors cannot end match or win",
+    "one enemy survivor blocks victory",
+    "local elimination permits loss without a provisional winner",
+    "production finish hooks reject premature callbacks and duplicate settlement",
+    "non-classic modes retain original callbacks",
+    "worker CPU masks exclude system core"
+  ],
+  "unity_integration": "DEVICE_TEST_PENDING"
+}

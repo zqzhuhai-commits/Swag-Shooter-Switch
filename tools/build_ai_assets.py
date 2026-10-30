@@ -88,7 +88,7 @@ new_by_id={o['pid']:new[o['offset']:o['offset']+o['size']] for o in parsed}
 assert struct.unpack_from('<I',new_by_id[11000],372)[0]==4
 assert struct.unpack_from('<I',new_by_id[15609],372)[0]==4
 assert new_by_id[15609][372+len(option_data):]==dropdown[440:]
-report={'version':'0.14.51','mode_source_translations':mode_edits,'settings_dropdown':15609,'label':15506,'options':options,'default':'普通AI',
+report={'version':'0.14.58','mode_source_translations':mode_edits,'settings_dropdown':15609,'label':15506,'options':options,'default':'普通AI',
         'changed_objects':list(changed),'disabled_old_localizers':disabled,'device_validation':'pending'}
-(root/'audit/ai-settings-0.14.51.json').write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding='utf-8')
+(root/'audit/ai-settings-0.14.58.json').write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding='utf-8')
 print('PASS AI difficulty settings: four options, original event preserved, unrelated selector unchanged')

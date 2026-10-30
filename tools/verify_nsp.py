@@ -137,11 +137,11 @@ def verify(path,project,keys):
         entry=nacp[i*768:(i+1)*768]
         assert entry[:512].split(b'\0')[0].decode()=='绝地精英'
         assert entry[512:].split(b'\0')[0].decode()=='Xiao Fan'
-    assert nacp[0x3060:0x3070].split(b'\0')[0]==b'0.14.51'
+    assert nacp[0x3060:0x3070].split(b'\0')[0]==b'0.14.58'
     icons=[data for name,data in control.items() if name.startswith('icon_')];assert len(icons)==16
     for icon in icons:assert Image.open(io.BytesIO(icon)).size==(256,256) and len(icon)<=0x20000
     meta=next(s[1] for s in nc[1][1] if s[0]=='pfs');assert len(meta)==1
-    cnmt=next(iter(meta.values()));assert struct.unpack_from('<QI',cnmt)==(tid,51) and cnmt[12]==0x80
+    cnmt=next(iter(meta.values()));assert struct.unpack_from('<QI',cnmt)==(tid,58) and cnmt[12]==0x80
     assert digest(cnmt[:-32])==cnmt[-32:]
     ext,count=struct.unpack_from('<HH',cnmt,14);assert count==2
     for i in range(count):
@@ -150,7 +150,7 @@ def verify(path,project,keys):
         assert record[:32]==digest(data) and record[32:48]==digest(data)[:16]
         assert int.from_bytes(record[48:54],'little')==len(data)
     report={'status':'PASS','checks':['three content-addressed NCAs','AES-XTS headers','NCA filesystem-header hashes','PFS0 block hashes','all six IVFC levels','NSO decompressed segment hashes','NPDM title/39-bit/application/memory syscalls','1866 game files match SHA-256','16 UTF-8 name/author labels','16 256x256 JPEG icons','CNMT content hashes/sizes/version/digest'],'sha256':hashlib.sha256(path.read_bytes()).hexdigest(),'hardware_install_launch':'PENDING'}
-    (project/'audit/nsp-verification-0.14.51.json').write_text(json.dumps(report,indent=2),encoding='utf-8')
+    (project/'audit/nsp-verification-0.14.58.json').write_text(json.dumps(report,indent=2),encoding='utf-8')
     print(json.dumps(report))
 
 if __name__=='__main__':

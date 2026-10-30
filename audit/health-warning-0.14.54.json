@@ -1,0 +1,9 @@
+{
+  "status": "PASS",
+  "gradient_expression_model_samples": 1001,
+  "center_alpha": 0,
+  "max_alpha": 0.45,
+  "no_step_at_gradient_start": true,
+  "actual_gl_shader_and_device_visual": "PENDING",
+  "health_threshold_and_fade_compiled_test": "see squad-rules-0.14.54.json"
+}

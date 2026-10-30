@@ -1,0 +1,33 @@
+{
+  "status": "PASS",
+  "compiled_arm64_fixture": true,
+  "instructions_executed": 7703022,
+  "human_arrival_orders": 52,
+  "players": 52,
+  "squads": 13,
+  "members_per_squad": 4,
+  "checks": [
+    "partial roster shows actual players only",
+    "deferred bot spawning enforces 51 bots after overwritten defaults",
+    "local HUD binds own team and corrects false death icons",
+    "roster capacity",
+    "human first/last/every intermediate arrival",
+    "duplicate death ignored",
+    "whole-squad elimination ranks",
+    "last surviving squad wins",
+    "round reset",
+    "production managed-array builder: 13 independent enemy lists and allied lists",
+    "32 survivors cannot end match or win",
+    "one enemy survivor blocks victory",
+    "local elimination permits loss without a provisional winner",
+    "production finish hooks reject premature callbacks and duplicate settlement",
+    "non-classic modes retain original callbacks",
+    "worker CPU masks exclude system core",
+    "health warning 30-percent threshold, monotonic opacity, smooth fade and upper bound",
+    "zone damage fallback grace and native damage suppression",
+    "36-survivor fixture: outside AI health depletion updates squad winner",
+    "production actor collector: roster priority, deduplication, expired handles, capacities 1..52",
+    "no dictionary indexer invocation in zone code"
+  ],
+  "unity_integration": "DEVICE_TEST_PENDING"
+}

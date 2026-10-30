@@ -8,7 +8,7 @@ import nsp_container as n
 TITLE='绝地精英'
 AUTHOR='Xiao Fan'
 TITLE_ID=0x01af534741470000
-VERSION='0.14.51'
+VERSION='0.14.58'
 LANGUAGES=['AmericanEnglish','BritishEnglish','Japanese','French','German','LatinAmericanSpanish','Spanish','Italian','Dutch','CanadianFrench','Portuguese','Russian','Korean','TraditionalChinese','SimplifiedChinese','BrazilianPortuguese']
 
 def read_header_key(path):
@@ -70,7 +70,7 @@ def build(project,nro,key_path,devkit,out,work):
     control.add_romfs([('control.nacp',metadata)]+[(f'icon_{language}.dat',icon) for language in LANGUAGES]);control=control.build(key)
     meta=n.Nca(n.CONTENT_META,TITLE_ID)
     cnmt=bytearray(n.cnmt(TITLE_ID,[(n.NCM_PROGRAM,program),(n.NCM_CONTROL,control)]))
-    struct.pack_into('<I',cnmt,8,51);cnmt[-32:]=n.sha256(cnmt[:-32])
+    struct.pack_into('<I',cnmt,8,58);cnmt[-32:]=n.sha256(cnmt[:-32])
     meta.add_pfs0([(f'Application_{TITLE_ID:016x}.cnmt',cnmt)],n.META_BLOCK);meta=meta.build(key)
     files=[(n.sha256(program)[:16].hex()+'.nca',program),(n.sha256(control)[:16].hex()+'.nca',control),(n.sha256(meta)[:16].hex()+'.cnmt.nca',meta)]
     out.parent.mkdir(parents=True,exist_ok=True)

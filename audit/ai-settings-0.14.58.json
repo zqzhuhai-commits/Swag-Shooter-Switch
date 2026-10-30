@@ -1,0 +1,48 @@
+{
+  "version": "0.14.58",
+  "mode_source_translations": [
+    "CLASSIC MODE",
+    "DEATH MATCH",
+    "SNIPER MODE",
+    "AXE MODE",
+    "KNIFE MODE",
+    "FREE MODE"
+  ],
+  "settings_dropdown": 15609,
+  "label": 15506,
+  "options": [
+    "简单AI",
+    "普通AI",
+    "困难AI",
+    "精英AI"
+  ],
+  "default": "普通AI",
+  "changed_objects": [
+    15609,
+    670,
+    7469,
+    1066,
+    7862,
+    1140,
+    7934,
+    1421,
+    8212,
+    1898,
+    8684,
+    455,
+    7256,
+    7194,
+    14285,
+    11000,
+    15506,
+    15619,
+    15725,
+    11067,
+    13778,
+    15505
+  ],
+  "disabled_old_localizers": [
+    15505
+  ],
+  "device_validation": "pending"
+}

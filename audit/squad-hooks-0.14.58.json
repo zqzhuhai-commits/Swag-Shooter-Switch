@@ -1,0 +1,90 @@
+{
+  "status": "PASS",
+  "binary_entry_guards": [
+    {
+      "entry": "squad_hud_alive",
+      "offset": "0x1796a90"
+    },
+    {
+      "entry": "squad_spawn_bots",
+      "offset": "0x15f99a0"
+    },
+    {
+      "entry": "squad_hud_fill",
+      "offset": "0x1799584"
+    },
+    {
+      "entry": "squad_hud_life",
+      "offset": "0x198c300"
+    },
+    {
+      "entry": "squad_spawn_players",
+      "offset": "0x19f7600"
+    },
+    {
+      "entry": "squad_join",
+      "offset": "0x1753ce4"
+    },
+    {
+      "entry": "squad_received",
+      "offset": "0x1753f24"
+    },
+    {
+      "entry": "squad_death",
+      "offset": "0x1755254"
+    },
+    {
+      "entry": "squad_reset",
+      "offset": "0x17546e0"
+    },
+    {
+      "entry": "squad_left",
+      "offset": "0x1754108"
+    },
+    {
+      "entry": "squad_rank",
+      "offset": "0x17550f8"
+    },
+    {
+      "entry": "squad_cards",
+      "offset": "0x1754f2c"
+    },
+    {
+      "entry": "squad_spawn_next",
+      "offset": "0x175459c"
+    },
+    {
+      "entry": "squad_lives",
+      "offset": "0x1754454"
+    },
+    {
+      "entry": "squad_get_team",
+      "offset": "0x1754528"
+    },
+    {
+      "entry": "squad_winners",
+      "offset": "0x1754dec"
+    },
+    {
+      "entry": "squad_losers",
+      "offset": "0x1754e8c"
+    },
+    {
+      "entry": "squad_end_time",
+      "offset": "0x1694464"
+    },
+    {
+      "entry": "squad_round_end",
+      "offset": "0x1688150"
+    },
+    {
+      "entry": "squad_player_died",
+      "offset": "0x168855c"
+    },
+    {
+      "entry": "squad_local_won",
+      "offset": "0x17548f0"
+    }
+  ],
+  "unity_integration": "DEVICE_TEST_PENDING"
+}

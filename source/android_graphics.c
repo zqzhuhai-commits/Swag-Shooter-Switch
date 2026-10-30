@@ -1,5 +1,6 @@
 #include "diagnostics.h"
 #include "android_graphics.h"
+#include "health_warning.h"
 #include <switch.h>
 #include <EGL/egl.h>
 #include <GLES3/gl3.h>
@@ -37,10 +38,24 @@ static EGLBoolean guest_destroy_surface(EGLDisplay display,EGLSurface surface) {
     }
     return result;
 }
+static EGLBoolean guest_destroy_context(EGLDisplay display,EGLContext context) {
+    EGLBoolean result=eglDestroyContext(display,context);
+    if(result)health_warning_context_lost(context);
+    return result;
+}
 static EGLBoolean trace_swap(EGLDisplay display,EGLSurface surface) {
     static unsigned calls;
     unsigned call=__atomic_add_fetch(&calls,1,__ATOMIC_RELAXED);
     if(diagnostics_enabled() && egl_log && call<=3) { fprintf(egl_log,"ENGINE_PRESENT_BEGIN count=%u\n",call); fflush(egl_log); }
+    int window_surface=0;
+    mutexLock(&surface_lock);
+    for(unsigned i=0;i<16;++i)if(window_surfaces[i].surface==surface) {window_surface=1;break;}
+    mutexUnlock(&surface_lock);
+    if(window_surface && health_warning_pending()) {
+        EGLint width=0,height=0;
+        if(guest_query_surface(display,surface,EGL_WIDTH,&width) && guest_query_surface(display,surface,EGL_HEIGHT,&height))
+            health_warning_draw(width,height);
+    }
     EGLBoolean result=eglSwapBuffers(display,surface);
     if(egl_log && call<=3) {
         EGLint width=0,height=0;
@@ -145,7 +160,7 @@ static const Binding bindings[]={
     GRAPHICS_BIND("ANativeWindow_getHeight",window_height), GRAPHICS_BIND("ANativeWindow_setBuffersGeometry",window_geometry),
     GRAPHICS_BIND("eglChooseConfig",eglChooseConfig), GRAPHICS_BIND("eglCreateContext",trace_context),
     GRAPHICS_BIND("eglCreatePbufferSurface",eglCreatePbufferSurface), GRAPHICS_BIND("eglCreateWindowSurface",trace_window),
-    GRAPHICS_BIND("eglDestroyContext",eglDestroyContext), GRAPHICS_BIND("eglDestroySurface",guest_destroy_surface),
+    GRAPHICS_BIND("eglDestroyContext",guest_destroy_context), GRAPHICS_BIND("eglDestroySurface",guest_destroy_surface),
     GRAPHICS_BIND("eglGetConfigAttrib",eglGetConfigAttrib), GRAPHICS_BIND("eglGetCurrentContext",eglGetCurrentContext),
     GRAPHICS_BIND("eglGetCurrentSurface",eglGetCurrentSurface), GRAPHICS_BIND("eglGetDisplay",eglGetDisplay),
     GRAPHICS_BIND("eglGetError",eglGetError), GRAPHICS_BIND("eglGetProcAddress",guest_get_proc),

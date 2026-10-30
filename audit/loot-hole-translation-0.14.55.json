@@ -1,0 +1,12 @@
+{
+  "status": "PASS",
+  "localization_terms": {
+    "Alert Loot hole opens in 20 secs See minimap to locate it": "物资洞穴将在20秒后开启，请查看小地图确定位置。\r",
+    "Save yourself Loot hole closes in 10 secs": "物资洞穴将在10秒后关闭，请尽快离开！"
+  },
+  "scene_labels": [
+    11253,
+    14092
+  ],
+  "device_visual": "PENDING"
+}

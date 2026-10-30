@@ -136,7 +136,7 @@ int main(int argc, char **argv) {
         if (R_SUCCEEDED(watcher_rc)) watcher_running = 1;
         else threadClose(&batch_watcher);
     }
-    fprintf(log, "SWAG-NX v0.14.51 lazy-memory; applet=%u own-process=%x\n",
+    fprintf(log, "SWAG-NX v0.14.58 lazy-memory; applet=%u own-process=%x\n",
             (unsigned)appletGetAppletType(), runtime_process_handle());
     runtime_services_init(log); guest_memory_set_log(log); startup_log(log); android_graphics_set_log(log);
     guest_system_set_log(log); unity_host_set_log(log);

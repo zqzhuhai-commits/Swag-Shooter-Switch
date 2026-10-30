@@ -1,0 +1,16 @@
+{
+  "version": "0.14.52",
+  "title": "绝地精英",
+  "author": "Xiao Fan",
+  "title_id": "01AF534741470000",
+  "artifact": "绝地精英 [01AF534741470000][0.14.52].nsp",
+  "bytes": 456962776,
+  "sha256": "1931460334db186bd92db44bc81f0912180b82e54db44e15d19ea429476e2982",
+  "native_nso": true,
+  "external_nro_required": false,
+  "romfs_bytes": 451252992,
+  "source_nro_sha256": "96af3467a730f8f7079dd9613039a86b087411857f3da4b4cd77ff192008f5de",
+  "native_nso_sha256": "a4bcd996b0b67e5682aae8380310fd3262e3797a203197d22709b1f03f7657a6",
+  "verification": "pending independent verify_nsp.py",
+  "device_launch": "pending"
+}

@@ -1,0 +1,7 @@
+{
+  "status": "PASS",
+  "binary_entry_guards": 2,
+  "native_navmesh_api_name": true,
+  "geometry_expression_model_cases": 5000,
+  "compiled_hook_and_unity_navigation": "DEVICE_TEST_PENDING"
+}

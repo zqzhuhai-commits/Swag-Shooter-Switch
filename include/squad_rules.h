@@ -21,6 +21,13 @@ static inline unsigned squad_rules_lives(const SquadRules *s,unsigned team) {
  for(unsigned i=(team-1)*SQUAD_SIZE;i<team*SQUAD_SIZE;++i)lives-=s->dead[i]!=0;
  return lives;
 }
+/* UI population never counts slots that have not actually registered. */
+static inline unsigned squad_rules_present_lives(const SquadRules *s,unsigned team) {
+ if(team<1 || team>SQUAD_TEAMS)return 0;
+ unsigned n=0;
+ for(unsigned i=(team-1)*SQUAD_SIZE;i<team*SQUAD_SIZE;++i)n+=s->used[i] && !s->dead[i];
+ return n;
+}
 static inline unsigned squad_rules_alive(const SquadRules *s) {
  unsigned alive=0;
  for(unsigned i=1;i<=SQUAD_TEAMS;++i)alive+=squad_rules_lives(s,i)>0;
@@ -37,6 +44,17 @@ static inline int squad_rules_death(SquadRules *s,unsigned slot) {
 static inline unsigned squad_rules_enemy_lives(const SquadRules *s) {
  unsigned alive=0;for(unsigned i=2;i<=SQUAD_TEAMS;++i)alive+=squad_rules_lives(s,i);
  return alive;
+}
+/* No provisional winner: an incomplete roster or multiple living factions
+ * can never award a squad victory. Local elimination may show a loss. */
+static inline unsigned squad_rules_winner(const SquadRules *s) {
+ if(s->registered!=SQUAD_PLAYERS || squad_rules_alive(s)!=1)return 0;
+ for(unsigned id=1;id<=SQUAD_TEAMS;++id)if(squad_rules_lives(s,id))return id;
+ return 0;
+}
+static inline int squad_rules_can_finish(const SquadRules *s) {
+ return s->registered==SQUAD_PLAYERS &&
+  (!squad_rules_lives(s,1) || squad_rules_winner(s)!=0);
 }
 /* Executed on the console before installing hooks; also usable by a host runner. */
 static inline int squad_rules_selftest(void) {

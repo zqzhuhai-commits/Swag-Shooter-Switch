@@ -1,0 +1,18 @@
+{
+  "status": "PASS",
+  "checks": [
+    "three content-addressed NCAs",
+    "AES-XTS headers",
+    "NCA filesystem-header hashes",
+    "PFS0 block hashes",
+    "all six IVFC levels",
+    "NSO decompressed segment hashes",
+    "NPDM title/39-bit/application/memory syscalls",
+    "1866 game files match SHA-256",
+    "16 UTF-8 name/author labels",
+    "16 256x256 JPEG icons",
+    "CNMT content hashes/sizes/version/digest"
+  ],
+  "sha256": "bac31f725b6b2ed60b229b44b4c967022a1cb684121c9baeb8791991a9baff9e",
+  "hardware_install_launch": "PENDING"
+}

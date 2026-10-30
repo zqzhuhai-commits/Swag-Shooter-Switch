@@ -1,0 +1,19 @@
+{
+  "status": "PASS",
+  "bridge_register_stack_datetime_and_float_cases": 40,
+  "wait_seconds": [
+    180,
+    120,
+    90,
+    60,
+    30
+  ],
+  "shrink_seconds": [
+    60,
+    45,
+    40,
+    30,
+    30
+  ],
+  "hardware_validation": "PENDING"
+}

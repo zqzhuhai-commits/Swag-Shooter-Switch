@@ -4,6 +4,15 @@ from pathlib import Path
 import struct,json,re
 root=(Path(__file__).resolve().parents[1]/'romfs/game')
 fix={
+ 'Alert Loot hole opens in 20 secs See minimap to locate it':'物资洞穴将在20秒后开启，请查看小地图确定位置。\r',
+ 'Save yourself Loot hole closes in 10 secs':'物资洞穴将在10秒后关闭，请尽快离开！',
+ 'Restricting the Play Area':'缩小游戏区！',
+ 'Restricting play area in 1 Min':'{[VALUE]}分钟后缩小游戏区域！',
+ 'Restricting play area in 1 sec':'{[VALUE]}秒后缩小游戏区域！',
+ 'Playzone shrink countdown has started Tap the map to view the new playzone':'缩小游戏区域的倒计时已开始，打开地图查看新的安全区。\r\n',
+ 'You were killed outside the Playzone':'你在安全区外被淘汰。\r\n',
+ 'Restrict Play Area':'缩小游戏区域',
+ 'Restrict Playarea':'缩小游戏区域',
  'Server':'游戏难度','SERVER':'游戏难度','Magnet Aim':'辅助瞄准',
  'EXIT':'退出','Exit':'退出','exit':'退出',
  'All vs All':'单人','ALL VS ALL':'单人','Team':'组队','TEAM':'组队','SwagShooter':'绝地精英','SWAG SHOOTER':'绝地精英',
@@ -60,6 +69,7 @@ b,objs,head,terms,end=parse(root/'bin/Data'/name)
 obj=objs[0];raw=b[obj['offset']:obj['offset']+obj['size']];edits=[];mapping={};revised=[]
 for t in terms:
  zh=fix.get(t['key'],t['chinese'])
+ zh=zh.replace('限制游戏区域','缩小游戏区域').replace('限制游戏区','缩小游戏区') if zh else zh
  if zh:
   mapping[t['english']]=zh;mapping[t['key']]=zh
  if zh!=t['chinese']:
@@ -91,6 +101,8 @@ mapping.update({
  'Turkish':'土耳其语','Russian':'俄语','Arabic':'阿拉伯语','Japanese':'日语','Korean':'韩语','Indonesian':'印度尼西亚语','Vietnamese':'越南语',
 })
 def label_translation(text):
+ if '限制游戏区域' in text or '限制游戏区' in text:
+  return text.replace('限制游戏区域','缩小游戏区域').replace('限制游戏区','缩小游戏区')
  if text in mapping:return mapping[text]
  result=text
  for english,chinese in [('EnemyDetector','敌人探测器'),('DIAMONDS','钻石'),('DIAMOND','钻石'),('Diamonds','钻石'),('Diamond','钻石'),('CASH','现金'),('Cash','现金'),('GOLD','金币'),('Gold','金币'),('MINUTE','分钟'),('MediPack','医疗包'),('Grenades','手雷'),('Grnade','手雷'),('Grenade','手雷'),('SmokeBomb','烟雾弹'),('Smokebomb','烟雾弹'),('Smoke','烟雾弹'),('FlashBomb','闪光弹'),('Flashbomb','闪光弹'),('SoundWave','声波装置'),('Soundwave','声波装置'),('EXP','经验值')]:
@@ -129,5 +141,5 @@ local_raw=bytearray(b[localizer['offset']:localizer['offset']+localizer['size']]
 (root/'font-assets/level1').write_bytes(rebuild(b,objs,head,changes))
 _,newobjs,_=asset(root/'font-assets/level1');assert len(newobjs)==len(objs)
 report={'terms_revised':revised,'fixed_scene_labels':labels,'remaining_scene_english':sorted(unknown),'device_validation':'pending'}
-(root.parents[1]/'audit/chinese-0.14.51.json').write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding='utf-8')
+(root.parents[1]/'audit/chinese-0.14.58.json').write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding='utf-8')
 print('PASS',len(revised),'translation corrections;',len(labels),'fixed scene labels; remaining English:',len(unknown))

@@ -4,6 +4,8 @@
 #include <string.h>
 #include <stdlib.h>
 #include "squad_rules.h"
+#include "health_warning.h"
+#include "zone_safety_policy.h"
 typedef struct {
  void *(*klass)(void *);
  void *(*field)(void *,const char *);
@@ -32,6 +34,7 @@ typedef struct {
  void (*barrier)(void *,void **,void *);
  void *(*class_from_type)(const void *);
  unsigned char (*assignable)(void *,void *);
+ void *(*resolve_icall)(const char *);
 } AiApi;
 static AiApi api;
 static FILE *output;
@@ -40,10 +43,10 @@ static unsigned bot_count;
 static void *object_field(void *object,const char *name);
 static const void *profile_game_image;
 static void squad_update_gun(void *gun);
-static void *ui_strings[10];
-static uint32_t ui_handles[10];
+static void *ui_strings[11];
+static uint32_t ui_handles[11];
 static void *ui_string(unsigned index) {
- static const char *words[]={"简单AI","普通AI","困难AI","精英AI","经典模式","死亡竞赛","狙击模式","斧头模式","匕首模式","自由模式"};
+ static const char *words[]={"简单AI","普通AI","困难AI","精英AI","经典模式","死亡竞赛","狙击模式","斧头模式","匕首模式","自由模式","游戏难度"};
  if(!ui_strings[index]) {
   void *s=api.new_string(words[index]);if(!s)return NULL;
   ui_handles[index]=api.strong(s,0);if(ui_handles[index])ui_strings[index]=s;
@@ -56,6 +59,19 @@ static void set_ui_text(void *text,unsigned index) {
  if(!desired || current==desired)return;
  const void *setter=api.method(api.klass(text),"set_text",1);
  if(setter) {void *args[]={desired},*exception=NULL;api.invoke(setter,text,args,&exception);}
+}
+static uint32_t loading_panel;
+static void (*original_loading_enable)(void *,void *);
+static void loading_difficulty_refresh(void) {
+ void *panel=loading_panel ? api.target(loading_panel) : NULL;if(!panel)return;
+ set_ui_text(object_field(panel,"serverText"),(unsigned)difficulty);
+ set_ui_text(object_field(panel,"serverTitleText"),10);
+}
+static void loading_enable(void *panel,void *method) {
+ original_loading_enable(panel,method);
+ if(loading_panel)api.release(loading_panel);
+ loading_panel=api.weak(panel,0);loading_difficulty_refresh();
+ if(output)fprintf(output,"AI_LOADING_DIFFICULTY selected=%d source=saved_ai_setting\n",difficulty);
 }
 void ai_profile_menu(const void *image) {
  profile_game_image=image;
@@ -102,6 +118,7 @@ typedef struct {
  uint32_t gun,base;float personality;
  Value original_gun[3],original_base[7];
  unsigned gun_present,base_present;
+ uint64_t route_next_tick;float route_position[3];int route_forced;
 } Bot;
 static Bot bots[128];
 static NxModuleMemory trampoline_memory;
@@ -127,11 +144,14 @@ static void *checked_field(void *object,const Spec *spec) {
 uintptr_t zone_phase_resume;
 extern void zone_phase_bridge(void);
 static uint32_t zone_coroutine;
+static uint32_t zone_area_handle;
 static unsigned zone_phase;
-static const unsigned zone_wait_seconds[]={180,120,90,60,30};
-static const unsigned zone_shrink_seconds[]={60,45,40,30,30};
+static unsigned zone_round_serial;
+/* Livik-inspired 52-player pacing; custom adaptation, not an official table. */
+static const unsigned zone_wait_seconds[]={180,120,90,75,60,45};
+static const unsigned zone_shrink_seconds[]={90,75,60,45,30,30};
 typedef struct {float x,y,z;} ZoneVector;
-static const float zone_shrink_fraction[]={0.25f,0.35f,0.40f,0.45f,0.50f};
+static const float zone_shrink_fraction[]={0.25f,0.35f,0.40f,0.45f,0.50f,0.50f};
 static int zone_vector_property(void *object,const char *name,ZoneVector *value,int write) {
  if(!object || !api.unbox)return -1;
  const void *method=api.method(api.klass(object),name,write ? 1 : 0);
@@ -203,12 +223,16 @@ void zone_phase_prepare(void *area,void *coroutine) {
  void *online=checked_field(area,&online_spec);unsigned char network=0;
  if(!wait || !shrink || !online)return;
  api.read(area,online,&network);if(network)return;
+ if(!zone_area_handle || api.target(zone_area_handle)!=area) {
+  if(zone_area_handle)api.release(zone_area_handle);
+  zone_area_handle=api.weak(area,0);
+ }
  if(!zone_coroutine || api.target(zone_coroutine)!=coroutine) {
   if(zone_coroutine)api.release(zone_coroutine);
-  zone_coroutine=api.weak(coroutine,0);zone_phase=0;
+  zone_coroutine=api.weak(coroutine,0);zone_phase=0;++zone_round_serial;
   if(!zone_coroutine)return;
  }
- unsigned phase=zone_phase<5 ? zone_phase : 4;
+ unsigned phase=zone_phase<6 ? zone_phase : 5;
  float minutes=(float)zone_wait_seconds[phase]/60.0f;
  float seconds=(float)zone_shrink_seconds[phase];
  api.write(area,wait,&minutes);api.write(area,shrink,&seconds);
@@ -224,6 +248,24 @@ static void *object_field(void *object,const char *name) {
  api.read(object,field,&value);return value;
 }
 #include "squad_mode.inc"
+#include "zone_ai.inc"
+static void health_warning_poll(void) {
+ void *game=squad_singleton("brijesh.CountryWar2","GameManager","_instance");
+ void *state=game ? api.field(api.klass(game),"gameState") : NULL;int playing=-1;
+ if(state && !(api.flags(state)&0x10) && api.kind(api.type(state))==17)api.read(game,state,&playing);
+ if(playing!=1) {health_warning_set(-1);return;}
+ void *player=object_field(game,"_localPlayer");int alive=0,local=0;
+ if(!player || squad_bool(player,"_isAlive",&alive) || !alive ||
+    squad_bool(player,"_isLocalPlayer",&local) || !local) {health_warning_set(-1);return;}
+ void *health=object_field(player,"playerHealth");
+ const Spec hp={"_health",12,0},maximum={"maxHealth",12,0};
+ void *hf=checked_field(health,&hp),*mf=checked_field(health,&maximum);float value=0,max=0;
+ if(!hf || !mf) {health_warning_set(-1);return;}
+ api.read(health,hf,&value);api.read(health,mf,&max);
+ if(!isfinite(value) || !isfinite(max) || value<=0 || max<=0) {health_warning_set(-1);return;}
+ float ratio=fminf(value/max,1.0f);
+ health_warning_set((int)(ratio*1000.0f));
+}
 static void capture(void *object,const Spec *spec,unsigned count,Value *values,unsigned *present) {
  *present=0;
  for(unsigned i=0;i<count;++i) {
@@ -243,9 +285,9 @@ static float scale_value(float original,float factor,float floor) {
 static void apply_bot(Bot *bot) {
  void *gun=api.target(bot->gun),*base=bot->base ? api.target(bot->base) : NULL;
  if(!gun)return;
- const float accuracy[]={1.35f,1,0.75f,0.55f};
- const float pause[]={1.3f,1,0.75f,0.55f};
- const float tactical[]={1.15f,1,0.8f,0.65f};
+ const float accuracy[]={1.35f,1,0.75f,0.40f};
+ const float pause[]={1.3f,1,0.75f,0.38f};
+ const float tactical[]={1.15f,1,0.8f,0.45f};
  float variation=difficulty>=2 ? bot->personality : 1;
  for(unsigned i=0;i<3;++i) {
   if(!(bot->gun_present&(1u<<i)))continue;
@@ -322,6 +364,10 @@ static void settings_initialize(void *object,void *method) {
  if(exception && output)fprintf(output,"AI_DIFFICULTY_UI result=EXCEPTION\n");
 }
 void ai_profile_poll(void) {
+ health_warning_poll();
+ zone_ai_poll();
+ zone_actors_poll();
+ loading_difficulty_refresh();
  squad_poll();
  /* Old region refreshes can run after panel initialization. Restore the saved
   * value without emitting selection events, and refresh the caption too. */
@@ -362,6 +408,7 @@ int ai_profile_prepare(AndroidElf *module,FILE *log) {
  API(corlib,"il2cpp_get_corlib");API(field_offset,"il2cpp_field_get_offset");
  API(barrier,"il2cpp_gc_wbarrier_set_field");
  API(class_from_type,"il2cpp_class_from_type");API(assignable,"il2cpp_class_is_assignable_from");
+ API(resolve_icall,"il2cpp_resolve_icall");
  #undef API
  if(!api.klass || !api.field || !api.flags || !api.type || !api.kind || !api.read || !api.write || !api.method || !api.invoke || !api.weak || !api.target || !api.release)return -1;
  const struct {size_t offset;uint32_t words[4];} guards[]={
@@ -370,7 +417,11 @@ int ai_profile_prepare(AndroidElf *module,FILE *log) {
   {0x19882ec,{0xa9be4ff4,0xa9017bfd,0x910043fd,0xb0008db4}},
   {0x1986b90,{0xa9bd57f6,0xa9014ff4,0xa9027bfd,0x910083fd}},
   {0x19864dc,{0xa9be4ff4,0xa9017bfd,0x910043fd,0xf0008db4}},
-  {0x1608b74,{0xaa1403f5,0xf80c8ea0,0xbc5c82a0,0xaa1503e0}}
+  {0x1608b74,{0xaa1403f5,0xf80c8ea0,0xbc5c82a0,0xaa1503e0}},
+  {0x16a8fec,{0x6dbb33ed,0x6d012beb,0x6d0223e9,0xa9034ff4}},
+  {0x16a9330,{0xf81e0ff3,0xa9017bfd,0x910043fd,0xaa0003f3}},
+  {0x163a8e4,{0xf81c0ff7,0xa90157f6,0xa9024ff4,0xa9037bfd}},
+  {0x16a9374,{0xfc1d0fe8,0xa9014ff4,0xa9027bfd,0x910083fd}}
  };
  for(unsigned i=0;i<sizeof guards/sizeof guards[0];++i)if(guards[i].offset+16>module->size || memcmp(module->image+guards[i].offset,guards[i].words,16))return -1;
  uint32_t mode_highlight;memcpy(&mode_highlight,module->image+0x1986c7c,4);if(mode_highlight!=0xf81c0ff7)return -1;
@@ -381,11 +432,24 @@ int ai_profile_prepare(AndroidElf *module,FILE *log) {
  if(nx_memory_prepare(&trampoline_memory,4096,log))return -1;
  memcpy(trampoline_memory.staging,module->image+0x169e36c,16);
  jump((unsigned char *)trampoline_memory.staging+16,module->bias+0x169e37c);
+ memcpy((unsigned char *)trampoline_memory.staging+64,module->image+0x16a8fec,16);
+ jump((unsigned char *)trampoline_memory.staging+80,module->bias+0x16a8ffc);
+ memcpy((unsigned char *)trampoline_memory.staging+128,module->image+0x163a8e4,16);
+ jump((unsigned char *)trampoline_memory.staging+144,module->bias+0x163a8f4);
+ memcpy((unsigned char *)trampoline_memory.staging+192,module->image+0x16a9374,16);
+ jump((unsigned char *)trampoline_memory.staging+208,module->bias+0x16a9384);
  AndroidElf trampoline={0};trampoline.image=trampoline_memory.staging;trampoline.size=trampoline_memory.size;
  trampoline.bias=(uintptr_t)trampoline_memory.execution;trampoline.relocated=1;trampoline.phnum=1;
  trampoline.ph[0].p_type=PT_LOAD;trampoline.ph[0].p_flags=PF_R|PF_X;trampoline.ph[0].p_memsz=4096;
  if(nx_memory_publish(&trampoline_memory,&trampoline,log))return -1;
  original_gun_changed=(void *)trampoline_memory.execution;
+ zone_move_original=(void *)((uintptr_t)trampoline_memory.execution+64);
+ zone_sprint=(void *)(module->bias+0x16a9330);
+ original_loading_enable=(void *)((uintptr_t)trampoline_memory.execution+128);
+ jump(module->image+0x163a8e4,(uintptr_t)loading_enable);
+ zone_late_original=(void *)((uintptr_t)trampoline_memory.execution+192);
+ jump(module->image+0x16a9374,(uintptr_t)zone_ai_late);
+ jump(module->image+0x16a8fec,(uintptr_t)zone_ai_move);
  zone_phase_resume=module->bias+0x1608b84;
  jump(module->image+0x1608b74,(uintptr_t)zone_phase_bridge);
  jump(module->image+0x169e36c,(uintptr_t)gun_changed);
