@@ -2540,14 +2540,28 @@ static void *jni_CallStaticObjectMethodA(void *env, void *clazz, void *methodID,
   return &fake_result;
 }
 
-/* CallStaticBooleanMethod (index 124) */
+/* JNI slots 117/118/119 have distinct variadic, va_list and jvalue ABIs. */
+static unsigned char jni_CallStaticBooleanMethodV(void *env, void *clazz,
+                                                 void *methodID, va_list ap) {
+  const char *nm = mid_name(methodID);
+  if (nm && strcmp(nm, "hasTouchScreen") == 0) return 1;
+  return nx_call_v(env, clazz, methodID, ap).i ? 1 : 0;
+}
+static unsigned char jni_CallStaticBooleanMethodA(void *env, void *clazz,
+                                                 void *methodID, const jvalue *args) {
+  const char *nm = mid_name(methodID);
+  if (nm && strcmp(nm, "hasTouchScreen") == 0) return 1;
+  debugPrintf("jni_shim: CallStaticBooleanMethodA(%s, %s)\n",
+              nm ? nm : "?", mid_sig(methodID) ? mid_sig(methodID) : "?");
+  return nx_call_a(env, clazz, methodID, args).i ? 1 : 0;
+}
 static unsigned char jni_CallStaticBooleanMethod(void *env, void *clazz,
                                                  void *methodID, ...) {
   const char *nm = mid_name(methodID);
   if (nm && strcmp(nm, "hasTouchScreen") == 0) return 1;
   va_list ap;
   va_start(ap, methodID);
-  unsigned char result = nx_call_v(env, clazz, methodID, ap).i ? 1 : 0;
+  unsigned char result = jni_CallStaticBooleanMethodV(env, clazz, methodID, ap);
   va_end(ap);
   return result;
 }
@@ -3674,7 +3688,8 @@ void jni_shim_init(void **out_vm, void **out_env) {
   jni_env_vtable[115] = (uintptr_t)jni_CallStaticObjectMethodV; /* V (va_list) */
   jni_env_vtable[116] = (uintptr_t)jni_CallStaticObjectMethodA; /* A (jvalue*) */
   jni_env_vtable[117] = (uintptr_t)jni_CallStaticBooleanMethod;
-  jni_env_vtable[118] = (uintptr_t)jni_CallStaticBooleanMethod; /* V */
+  jni_env_vtable[118] = (uintptr_t)jni_CallStaticBooleanMethodV;
+  jni_env_vtable[119] = (uintptr_t)jni_CallStaticBooleanMethodA;
   jni_env_vtable[129] = (uintptr_t)jni_CallStaticIntMethod;
   jni_env_vtable[130] = (uintptr_t)jni_CallStaticIntMethodV; /* V (va_list) */
   jni_env_vtable[132] = (uintptr_t)jni_CallStaticLongMethod;

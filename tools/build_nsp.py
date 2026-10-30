@@ -8,7 +8,7 @@ import nsp_container as n
 TITLE='绝地精英'
 AUTHOR='Xiao Fan'
 TITLE_ID=0x01af534741470000
-VERSION='0.14.34'
+VERSION='0.14.38'
 LANGUAGES=['AmericanEnglish','BritishEnglish','Japanese','French','German','LatinAmericanSpanish','Spanish','Italian','Dutch','CanadianFrench','Portuguese','Russian','Korean','TraditionalChinese','SimplifiedChinese','BrazilianPortuguese']
 
 def read_header_key(path):
@@ -70,14 +70,14 @@ def build(project,nro,key_path,devkit,out,work):
     control.add_romfs([('control.nacp',metadata)]+[(f'icon_{language}.dat',icon) for language in LANGUAGES]);control=control.build(key)
     meta=n.Nca(n.CONTENT_META,TITLE_ID)
     cnmt=bytearray(n.cnmt(TITLE_ID,[(n.NCM_PROGRAM,program),(n.NCM_CONTROL,control)]))
-    struct.pack_into('<I',cnmt,8,34);cnmt[-32:]=n.sha256(cnmt[:-32])
+    struct.pack_into('<I',cnmt,8,38);cnmt[-32:]=n.sha256(cnmt[:-32])
     meta.add_pfs0([(f'Application_{TITLE_ID:016x}.cnmt',cnmt)],n.META_BLOCK);meta=meta.build(key)
     files=[(n.sha256(program)[:16].hex()+'.nca',program),(n.sha256(control)[:16].hex()+'.nca',control),(n.sha256(meta)[:16].hex()+'.cnmt.nca',meta)]
     out.parent.mkdir(parents=True,exist_ok=True)
     temporary=out.with_suffix('.nsp.partial')
     temporary.write_bytes(n.pfs0(files));temporary.replace(out)
     report={'version':VERSION,'title':TITLE,'author':AUTHOR,'title_id':f'{TITLE_ID:016X}','artifact':out.name,'bytes':out.stat().st_size,'sha256':hashlib.sha256(out.read_bytes()).hexdigest(),'native_nso':True,'external_nro_required':False,'romfs_bytes':len(image),'source_nro_sha256':hashlib.sha256(source).hexdigest(),'native_nso_sha256':hashlib.sha256(main).hexdigest(),'verification':'pending independent verify_nsp.py','device_launch':'pending'}
-    (project/'audit/nsp-0.14.34.json').write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding='utf-8')
+    (project/f'audit/nsp-{VERSION}.json').write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding='utf-8')
     print(json.dumps(report,ensure_ascii=False))
 
 if __name__=='__main__':
@@ -86,6 +86,6 @@ if __name__=='__main__':
     ap.add_argument('--project',type=Path,default=root);ap.add_argument('--nro',type=Path,default=root/'swag-switch.nro')
     ap.add_argument('--keys',type=Path,default=Path.home()/'.switch/prod.keys')
     ap.add_argument('--devkitpro',type=Path,default=Path('C:/devkitPro'))
-    ap.add_argument('--out',type=Path,default=root.parent/f'{TITLE} [01AF534741470000][0.14.34].nsp')
+    ap.add_argument('--out',type=Path,default=root.parent/f'{TITLE} [01AF534741470000][{VERSION}].nsp')
     ap.add_argument('--work',type=Path,default=root/'build/nsp')
     a=ap.parse_args();build(a.project.resolve(),a.nro.resolve(),a.keys.resolve(),a.devkitpro.resolve(),a.out.resolve(),a.work.resolve())

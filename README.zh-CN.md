@@ -1,18 +1,18 @@
 # 绝地精英 — Switch 移植
 
-名称：绝地精英；作者：Xiao Fan。当前发布版本 **0.14.34-fix1**（游戏内及NSP版本仍为 **0.14.34**），运行于Atmosphère。
+名称：绝地精英；作者：Xiao Fan。当前正式版本 **0.14.38**，运行于Atmosphère。用户于2026年10月30日确认此版本实机测试通过。
 
-用户已确认能进入游戏、中文显示、按键/触屏响应及自动识别驾驶状态。最新驾驶布局为左摇杆仅前后、右摇杆仅左右，十字键四向及ZR/ZL仍保留。修复原生NSP启动时的 `0x00010801`：不再通过创建本地HIPC会话获取自身进程句柄，改用Atmosphère/Mesosphere接口。用户已确认功能修复后可进入游戏；本次发布成品内置同一修改。验证范围及成品说明见[发布说明](RELEASE-0.14.34-fix1.md)。
+使用与实机测试相同的NSP发布。包含原生启动修复、离线商店、本地购买发放、激励奖励直接领取及按钮动态价格文字修复。现金、金币、钻石每次启动进入菜单后各补为10,000,000，之后正常记录消费/奖励。修正85条中文词条及732处场景固定文字。
 
 ## 单文件NSP
 
-本地生成的NSP包含原生NSO、完整游戏RomFS、名称/作者和图标，无需外置NRO。应用ID为`01AF534741470000`。存档及元数据缓存仍使用SD `/switch/swag-userdata/`。构建及验证见[打包说明](packaging/README.md)，校验记录见[audit/nsp-verification-0.14.34.json](audit/nsp-verification-0.14.34.json)。
+[下载0.14.38](https://github.com/zqzhuhai-commits/Swag-Shooter-Switch/releases/tag/v0.14.38)，解压后安装，覆盖旧版时保留存档。NSP包含原生NSO、完整资源与图标，无需外置NRO。应用ID为`01AF534741470000`，包版本38。存档/缓存仍使用SD `/switch/swag-userdata/`。
 
-仓库仅含兼容层源码、构建脚本、图标和校验记录，不向Git历史提交游戏二进制、游戏素材、用户密钥或测试日志；成品通过Release附件提供。请自行准备`romfs/game/`，包括库、原始Data、font-assets及许可文件。当前包由1863个本地文件构成。
+详情见[发布说明](RELEASE-0.14.38.md)、[打包说明](packaging/README.md)和[audit/nsp-verification-0.14.38.json](audit/nsp-verification-0.14.38.json)。实机通过不代表所有玩法或系统版本均已穷尽验证。AI难度增强留待后续测试版本。
 
 ## 构建
 
-安装devkitPro的devkitA64、libnx、SDL2、Mesa EGL/GLES及依赖，以及Python。运行`./build.ps1`生成NRO与ELF；`python tools/verify_build.py`检查NRO和嵌入文件。进一步生成NSP需要Python cryptography、Pillow与自己的本地密钥文件，见打包说明。
+自行准备`romfs/game/`原始资源、已有CJK字体替换资源及许可。运行`python tools/build_chinese_assets.py`生成中文覆盖，再运行`./build.ps1`及`python tools/verify_build.py`；生成NSP见打包说明。源码不含游戏资源、用户密钥、设备原始日志或大型安装包；成品通过Release附件提供。当前嵌入文件1865个。
 
 ## 按键
 

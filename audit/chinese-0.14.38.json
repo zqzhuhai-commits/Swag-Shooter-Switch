@@ -1,0 +1,4142 @@
+{
+  "terms_revised": [
+    {
+      "key": "Increase in Armour Health",
+      "before": "护甲健康增加％",
+      "after": "护甲值提升%"
+    },
+    {
+      "key": "Increase in Health",
+      "before": "健康增加％",
+      "after": "生命值提升%"
+    },
+    {
+      "key": "increase in Speed",
+      "before": "速度增加％",
+      "after": "速度提升%"
+    },
+    {
+      "key": "less Headshot Damage",
+      "before": "％爆头伤害减少％",
+      "after": "受到的爆头伤害降低%"
+    },
+    {
+      "key": "less damage of Pulse Pistol",
+      "before": "脉冲手枪的伤害减少％",
+      "after": "受到的脉冲手枪伤害降低%"
+    },
+    {
+      "key": "Free",
+      "before": "（自由）",
+      "after": "（免费）"
+    },
+    {
+      "key": "2X CLAIM",
+      "before": "2X索赔",
+      "after": "双倍领取"
+    },
+    {
+      "key": "2x Claim",
+      "before": "2x索赔",
+      "after": "双倍领取"
+    },
+    {
+      "key": "2x Claim Bonus",
+      "before": "2x索赔奖金",
+      "after": "领取双倍奖励"
+    },
+    {
+      "key": "2x Claim Reward",
+      "before": "2x索赔奖励",
+      "after": "领取双倍奖励"
+    },
+    {
+      "key": "ACTIVATE NOW",
+      "before": "现在激活！",
+      "after": "立即激活"
+    },
+    {
+      "key": "ACTIVATED",
+      "before": "活性！",
+      "after": "已激活"
+    },
+    {
+      "key": "ACTIVE",
+      "before": "活性",
+      "after": "生效中"
+    },
+    {
+      "key": "ADS CRATE",
+      "before": "广告箱",
+      "after": "奖励宝箱"
+    },
+    {
+      "key": "Activate Now",
+      "before": "",
+      "after": "立即激活"
+    },
+    {
+      "key": "Activate Now",
+      "before": "现在激活！",
+      "after": "立即激活"
+    },
+    {
+      "key": "Activate Power Pack",
+      "before": "激活电源组",
+      "after": "激活强化礼包"
+    },
+    {
+      "key": "Active",
+      "before": "活性",
+      "after": "生效中"
+    },
+    {
+      "key": "After each kill 10 less damage for 3s",
+      "before": "每次杀死3s后伤害减少10％",
+      "after": "每次击杀后，受到的伤害降低10%，持续3秒。"
+    },
+    {
+      "key": "After each kill 20 less damage for 3s",
+      "before": "每次杀戮后3秒内造成的伤害降低20％",
+      "after": "每次击杀后，受到的伤害降低20%，持续3秒。"
+    },
+    {
+      "key": "Alive",
+      "before": "活",
+      "after": "存活"
+    },
+    {
+      "key": "Auto Pickup",
+      "before": "自动取件",
+      "after": "自动拾取"
+    },
+    {
+      "key": "Back",
+      "before": "背部",
+      "after": "返回"
+    },
+    {
+      "key": "Best Surprise Gun",
+      "before": "最好的惊喜枪",
+      "after": "惊喜武器"
+    },
+    {
+      "key": "Boombastic Pack",
+      "before": "Boombastic Pack",
+      "after": "爆破礼包"
+    },
+    {
+      "key": "Boost EXP",
+      "before": "提升exp",
+      "after": "经验加成"
+    },
+    {
+      "key": "Buy EXP Booster",
+      "before": "买exp助推器",
+      "after": "购买经验加成"
+    },
+    {
+      "key": "Buy Now",
+      "before": "立即购买！",
+      "after": "立即购买"
+    },
+    {
+      "key": "CHARACTER",
+      "before": "字符",
+      "after": "角色"
+    },
+    {
+      "key": "CLAIM BONUS",
+      "before": "索赔奖金",
+      "after": "领取奖励"
+    },
+    {
+      "key": "CLAIM LEVEL 2X BONUS",
+      "before": "索赔等级2x奖金",
+      "after": "领取双倍升级奖励"
+    },
+    {
+      "key": "CLAIM ROUND 2X BONUS",
+      "before": "索赔2倍奖金",
+      "after": "领取双倍对局奖励"
+    },
+    {
+      "key": "CLIP",
+      "before": "夹",
+      "after": "弹匣容量"
+    },
+    {
+      "key": "CRATE",
+      "before": "箱",
+      "after": "宝箱"
+    },
+    {
+      "key": "Claim",
+      "before": "要求",
+      "after": "领取"
+    },
+    {
+      "key": "Claim 2x Bonus",
+      "before": "索赔2倍奖金",
+      "after": "领取双倍奖励"
+    },
+    {
+      "key": "Claim Bonus",
+      "before": "索赔奖金",
+      "after": "领取奖励"
+    },
+    {
+      "key": "Claim Your Free Gifts",
+      "before": "索取你的免费礼物..！",
+      "after": "领取免费礼包"
+    },
+    {
+      "key": "Class",
+      "before": "课程：",
+      "after": "类别："
+    },
+    {
+      "key": "Extra MediPack",
+      "before": "额外的MediPack",
+      "after": "额外医疗包"
+    },
+    {
+      "key": "FIRE RATE",
+      "before": "火率",
+      "after": "射速"
+    },
+    {
+      "key": "FREE",
+      "before": "自由",
+      "after": "免费"
+    },
+    {
+      "key": "FREE CASH",
+      "before": "自由现金",
+      "after": "免费现金"
+    },
+    {
+      "key": "FREE CRATE",
+      "before": "免费箱子",
+      "after": "免费宝箱"
+    },
+    {
+      "key": "FREE GOLD",
+      "before": "免费黄金",
+      "after": "免费金币"
+    },
+    {
+      "key": "Free Cash",
+      "before": "自由现金",
+      "after": "免费现金"
+    },
+    {
+      "key": "GET 1 DIAMOND BONUS",
+      "before": "获得1颗钻石奖金",
+      "after": "领取1颗钻石"
+    },
+    {
+      "key": "Get 2 Free",
+      "before": "获得2免费！",
+      "after": "免费领取两个"
+    },
+    {
+      "key": "Health Booster",
+      "before": "健康助推器",
+      "after": "生命强化"
+    },
+    {
+      "key": "Make sure you activate your Power Pack to kill your rivals easily and be the last survivor",
+      "before": "确保你激活你的Power Pack以轻松杀死你的对手并成为最后的幸存者。",
+      "after": "激活强化礼包，提升战斗能力，争取成为最后的生存者。"
+    },
+    {
+      "key": "NOT ENOUGH CASH",
+      "before": "没有足够的现金",
+      "after": "现金不足"
+    },
+    {
+      "key": "NOT ENOUGH DIAMONDS",
+      "before": "没有足够的钻石",
+      "after": "钻石不足"
+    },
+    {
+      "key": "NOT ENOUGH GOLD",
+      "before": "没有足够的黄金",
+      "after": "金币不足"
+    },
+    {
+      "key": "Nothing to Claim",
+      "before": "无需索赔",
+      "after": "暂无可领取奖励"
+    },
+    {
+      "key": "Open Free Crate every 12 hours for bonuses",
+      "before": "打开免费箱子\n奖金每12小时一次。",
+      "after": "每12小时可开启一次免费宝箱。"
+    },
+    {
+      "key": "POWER",
+      "before": "功率",
+      "after": "威力"
+    },
+    {
+      "key": "Power Pack Not Activated",
+      "before": "动力单元\n未激活",
+      "after": "强化礼包\n未激活"
+    },
+    {
+      "key": "RELOAD",
+      "before": "重装",
+      "after": "换弹速度"
+    },
+    {
+      "key": "Rent for Free",
+      "before": "免费租赁",
+      "after": "免费租用"
+    },
+    {
+      "key": "SHOP",
+      "before": "店",
+      "after": "商店"
+    },
+    {
+      "key": "Survivor Package",
+      "before": "幸存者包",
+      "after": "生存者礼包"
+    },
+    {
+      "key": "This is a great opportunity  Grab the double Cash Gold and Exp   Dont miss it",
+      "before": "这是一个很好的机会！\n抓住双倍现金，黄金和Exp。\n不要错过!!",
+      "after": "领取双倍现金、金币和经验奖励！"
+    },
+    {
+      "key": "This is a unique opportunity  Dont miss it  Get free Propack EXP Booster Remove 2x Claim  Exit Ads",
+      "before": "这是一次难得的机会！千万不要错过！\n获得免费的Pro-pack，EXP助推器，删除2x索赔和退出广告！",
+      "after": "免费获取强化礼包和经验加成，免除双倍领奖和退出时的广告。"
+    },
+    {
+      "key": "Upgrade Now",
+      "before": "",
+      "after": "立即升级"
+    },
+    {
+      "key": "Upgrade Now",
+      "before": "现在升级！",
+      "after": "立即升级"
+    },
+    {
+      "key": "WATCH A VIDEO",
+      "before": "观看视频",
+      "after": "领取奖励"
+    },
+    {
+      "key": "Watch Ads",
+      "before": "观看广告",
+      "after": "领取奖励"
+    },
+    {
+      "key": "Watch Video Ad",
+      "before": "观看视频广告＆",
+      "after": "直接领取奖励"
+    },
+    {
+      "key": "claimFreeCrate",
+      "before": "拿免费箱子",
+      "after": "领取免费宝箱"
+    },
+    {
+      "key": "Loading",
+      "before": "装载",
+      "after": "加载中"
+    },
+    {
+      "key": "GRAB IT NOW",
+      "before": "抓住它吧",
+      "after": "立即领取"
+    },
+    {
+      "key": "Ok",
+      "before": "好",
+      "after": "确定"
+    },
+    {
+      "key": "Sniper",
+      "before": "狙击兵",
+      "after": "狙击枪"
+    },
+    {
+      "key": "Activated",
+      "before": "活性",
+      "after": "已激活"
+    },
+    {
+      "key": "Fuel Vehicle",
+      "before": "燃料汽车",
+      "after": "为载具加油"
+    },
+    {
+      "key": "REVEAL GUN",
+      "before": "露出枪",
+      "after": "揭晓武器"
+    },
+    {
+      "key": "Unlock at Level 3",
+      "before": "解锁水平。 3",
+      "after": "3级解锁"
+    },
+    {
+      "key": "Unlock at Level 5",
+      "before": "解锁水平。五",
+      "after": "5级解锁"
+    },
+    {
+      "key": "You have chance to rebirth Still hope to be 1 Respawn Now",
+      "before": "",
+      "after": "你还有重生机会！\n重返战场，争夺第一！"
+    },
+    {
+      "key": "You have chance to rebirthStill hope to be 1Respawn Now",
+      "before": "你有机会重生。\n仍然希望成为＃1。\n现在重生。",
+      "after": "你还有重生机会！\n重返战场，争夺第一！"
+    },
+    {
+      "key": "POWER PACK",
+      "before": "动力单元",
+      "after": "强化礼包"
+    },
+    {
+      "key": "EXP BOOSTER PACK",
+      "before": "Exp助推器包",
+      "after": "经验加成礼包"
+    },
+    {
+      "key": "Ad",
+      "before": "至",
+      "after": "广告"
+    },
+    {
+      "key": "CLAIM",
+      "before": "要求",
+      "after": "领取"
+    },
+    {
+      "key": "LATER",
+      "before": "后来",
+      "after": "稍后"
+    }
+  ],
+  "fixed_scene_labels": [
+    {
+      "pid": 10833,
+      "before": "DIAMOND",
+      "after": "钻石"
+    },
+    {
+      "pid": 10854,
+      "before": "25% OFF",
+      "after": "7.5折"
+    },
+    {
+      "pid": 10857,
+      "before": "KILLS",
+      "after": "杀死"
+    },
+    {
+      "pid": 10866,
+      "before": "Scope4X",
+      "after": "4倍镜"
+    },
+    {
+      "pid": 10869,
+      "before": "CASH",
+      "after": "现金"
+    },
+    {
+      "pid": 10870,
+      "before": "MediPack x 10",
+      "after": "医疗包 x 10"
+    },
+    {
+      "pid": 10880,
+      "before": "No",
+      "after": "没有"
+    },
+    {
+      "pid": 10881,
+      "before": "500 EXP",
+      "after": "500 经验值"
+    },
+    {
+      "pid": 10883,
+      "before": "100",
+      "after": "免费获取"
+    },
+    {
+      "pid": 10884,
+      "before": "Armory",
+      "after": "军械库"
+    },
+    {
+      "pid": 10889,
+      "before": "Informations",
+      "after": "信息"
+    },
+    {
+      "pid": 10907,
+      "before": "55% OFF",
+      "after": "4.5折"
+    },
+    {
+      "pid": 10911,
+      "before": "Class :",
+      "after": "类别："
+    },
+    {
+      "pid": 10918,
+      "before": "Instant Delivery",
+      "after": "即时交付"
+    },
+    {
+      "pid": 10925,
+      "before": "YOU GOT",
+      "after": "你得到了"
+    },
+    {
+      "pid": 10931,
+      "before": "Power Pack\nNot Activated",
+      "after": "强化礼包\n未激活"
+    },
+    {
+      "pid": 10936,
+      "before": "Remind me to play",
+      "after": "提醒我玩"
+    },
+    {
+      "pid": 10946,
+      "before": "Wins",
+      "after": "胜"
+    },
+    {
+      "pid": 10953,
+      "before": "EARN",
+      "after": "赚"
+    },
+    {
+      "pid": 10955,
+      "before": "CLAIM BONUS",
+      "after": "领取奖励"
+    },
+    {
+      "pid": 10967,
+      "before": "",
+      "after": "你还有重生机会！\n重返战场，争夺第一！"
+    },
+    {
+      "pid": 10968,
+      "before": "MediPack x 10",
+      "after": "医疗包 x 10"
+    },
+    {
+      "pid": 10970,
+      "before": "YOU RECEIVED",
+      "after": "你收到"
+    },
+    {
+      "pid": 10972,
+      "before": "FREE CASH",
+      "after": "免费现金"
+    },
+    {
+      "pid": 10977,
+      "before": "150 EnemyDetector",
+      "after": "150 敌人探测器"
+    },
+    {
+      "pid": 10979,
+      "before": "Total Rewards:",
+      "after": "总奖励："
+    },
+    {
+      "pid": 10990,
+      "before": "RENT TIME LEFT",
+      "after": "租借时间"
+    },
+    {
+      "pid": 10993,
+      "before": "RANK",
+      "after": "秩"
+    },
+    {
+      "pid": 11007,
+      "before": "Existing ammo does not fits the equipped guns.",
+      "after": "现有的弹药不适合装备好的枪支。"
+    },
+    {
+      "pid": 11015,
+      "before": "YOU GOT",
+      "after": "你得到了"
+    },
+    {
+      "pid": 11022,
+      "before": "1125000 CASH\n243750 GOLD",
+      "after": "1125000 现金\n243750 金币"
+    },
+    {
+      "pid": 11023,
+      "before": "Primary Gun Name",
+      "after": "主武器名称"
+    },
+    {
+      "pid": 11041,
+      "before": "GET 25 DIAMOND",
+      "after": "领取25颗钻石"
+    },
+    {
+      "pid": 11049,
+      "before": "15% OFF",
+      "after": "8.5折"
+    },
+    {
+      "pid": 11055,
+      "before": "45% OFF",
+      "after": "5.5折"
+    },
+    {
+      "pid": 11067,
+      "before": "ASIA",
+      "after": "亚洲"
+    },
+    {
+      "pid": 11079,
+      "before": "Restore Purchases",
+      "after": "恢复购买"
+    },
+    {
+      "pid": 11104,
+      "before": "CONGRATULATIONS",
+      "after": "祝贺"
+    },
+    {
+      "pid": 11112,
+      "before": "GOLD",
+      "after": "金币"
+    },
+    {
+      "pid": 11113,
+      "before": "AssaultRifle Ammo",
+      "after": "突击步枪弹药"
+    },
+    {
+      "pid": 11123,
+      "before": "Daily Bonus",
+      "after": "每日奖金"
+    },
+    {
+      "pid": 11130,
+      "before": "Soundwave x 5",
+      "after": "声波装置 x 5"
+    },
+    {
+      "pid": 11139,
+      "before": "30% OFF",
+      "after": "7折"
+    },
+    {
+      "pid": 11141,
+      "before": "FlashBomb",
+      "after": "闪光弹"
+    },
+    {
+      "pid": 11144,
+      "before": "DAY",
+      "after": "天"
+    },
+    {
+      "pid": 11145,
+      "before": "CLASSIC MODE",
+      "after": "经典模式"
+    },
+    {
+      "pid": 11159,
+      "before": "500 CASH",
+      "after": "500 现金"
+    },
+    {
+      "pid": 11169,
+      "before": "Enjoy Playing with New rolled out Update.",
+      "after": "体验新版本内容。"
+    },
+    {
+      "pid": 11172,
+      "before": "Watch Video Ad &",
+      "after": "直接领取奖励"
+    },
+    {
+      "pid": 11181,
+      "before": "YOU'VE LEVELED UP",
+      "after": "你已经升级了"
+    },
+    {
+      "pid": 11188,
+      "before": "EQUIP",
+      "after": "装备"
+    },
+    {
+      "pid": 11192,
+      "before": "Get 2 Free!",
+      "after": "免费领取两个"
+    },
+    {
+      "pid": 11206,
+      "before": "150000 GOLD",
+      "after": "150000 金币"
+    },
+    {
+      "pid": 11212,
+      "before": "Level Reward",
+      "after": "等级奖励"
+    },
+    {
+      "pid": 11220,
+      "before": "YOU GOT",
+      "after": "你得到了"
+    },
+    {
+      "pid": 11238,
+      "before": "FREE UPGRADE",
+      "after": "免费升级"
+    },
+    {
+      "pid": 11247,
+      "before": "Activated",
+      "after": "已激活"
+    },
+    {
+      "pid": 11250,
+      "before": "FREE UPGRADE",
+      "after": "免费升级"
+    },
+    {
+      "pid": 11253,
+      "before": "Alert! Loot hole opens in 20 secs. See minimap to locate it.\r",
+      "after": "警报！炮孔在20秒内打开。请参阅迷你地图以找到它。\r"
+    },
+    {
+      "pid": 11256,
+      "before": "Grenade",
+      "after": "手雷"
+    },
+    {
+      "pid": 11258,
+      "before": "EXIT",
+      "after": "出口"
+    },
+    {
+      "pid": 11259,
+      "before": "ROYAL GOLD CRATE",
+      "after": "皇家黄金宝箱"
+    },
+    {
+      "pid": 11265,
+      "before": "1 DIAMOND",
+      "after": "1 钻石"
+    },
+    {
+      "pid": 11281,
+      "before": "2070000 CASH",
+      "after": "2070000 现金"
+    },
+    {
+      "pid": 11285,
+      "before": "Unlocked Weapons :",
+      "after": "解锁武器："
+    },
+    {
+      "pid": 11301,
+      "before": "CLOSE",
+      "after": "关"
+    },
+    {
+      "pid": 11310,
+      "before": "Room Created",
+      "after": "房间创建"
+    },
+    {
+      "pid": 11321,
+      "before": "",
+      "after": "你还有重生机会！\n重返战场，争夺第一！"
+    },
+    {
+      "pid": 11328,
+      "before": "SPECIAL GUN",
+      "after": "特种枪"
+    },
+    {
+      "pid": 11333,
+      "before": "Unlock at Lv. 3",
+      "after": "3级解锁"
+    },
+    {
+      "pid": 11335,
+      "before": "25% Off",
+      "after": "7.5折"
+    },
+    {
+      "pid": 11340,
+      "before": "Knife",
+      "after": "匕首"
+    },
+    {
+      "pid": 11344,
+      "before": "CONGRATULATIONS",
+      "after": "祝贺"
+    },
+    {
+      "pid": 11346,
+      "before": "Play For Best Weapon",
+      "after": "发挥最好的武器"
+    },
+    {
+      "pid": 11349,
+      "before": "DAY",
+      "after": "天"
+    },
+    {
+      "pid": 11357,
+      "before": "Claim",
+      "after": "领取"
+    },
+    {
+      "pid": 11358,
+      "before": "MediPack x 5",
+      "after": "医疗包 x 5"
+    },
+    {
+      "pid": 11359,
+      "before": "Rifle",
+      "after": "步枪"
+    },
+    {
+      "pid": 11364,
+      "before": "Write your signature...",
+      "after": "输入个性签名……"
+    },
+    {
+      "pid": 11372,
+      "before": "20% OFF",
+      "after": "8折"
+    },
+    {
+      "pid": 11381,
+      "before": "2x Claim",
+      "after": "双倍领取"
+    },
+    {
+      "pid": 11383,
+      "before": "ENEMY DETECTOR",
+      "after": "敌人探测器"
+    },
+    {
+      "pid": 11389,
+      "before": "DAY",
+      "after": "天"
+    },
+    {
+      "pid": 11392,
+      "before": "1856250 CASH\n435000 GOLD",
+      "after": "1856250 现金\n435000 金币"
+    },
+    {
+      "pid": 11410,
+      "before": "VIDEO WATCHED",
+      "after": "视频观看"
+    },
+    {
+      "pid": 11412,
+      "before": "FREE GOLD",
+      "after": "免费金币"
+    },
+    {
+      "pid": 11417,
+      "before": "2587500 CASH\n581250 GOLD",
+      "after": "2587500 现金\n581250 金币"
+    },
+    {
+      "pid": 11438,
+      "before": "YOU RECEIVED",
+      "after": "你收到"
+    },
+    {
+      "pid": 11439,
+      "before": "100000 CASH",
+      "after": "100000 现金"
+    },
+    {
+      "pid": 11443,
+      "before": "FIRE RATE",
+      "after": "射速"
+    },
+    {
+      "pid": 11459,
+      "before": "Power Pack",
+      "after": "强化礼包"
+    },
+    {
+      "pid": 11467,
+      "before": "Axe",
+      "after": "斧头"
+    },
+    {
+      "pid": 11472,
+      "before": "DAY",
+      "after": "天"
+    },
+    {
+      "pid": 11474,
+      "before": "Congratulations",
+      "after": "祝贺"
+    },
+    {
+      "pid": 11484,
+      "before": "GET 1 DIAMOND BONUS",
+      "after": "领取1颗钻石"
+    },
+    {
+      "pid": 11485,
+      "before": "Enemy Detector: Let you know all the enemy locations in minimap for 60 secs. And Detector usage is valid until next gameplay of wining the Swagger Trophy.",
+      "after": "敌人探测器：让你知道小地图中的所有敌人位置，持续60秒。并且探测器的使用在下一次赢得Swagger奖杯的游戏之前是有效的。"
+    },
+    {
+      "pid": 11503,
+      "before": "EXP Booster\n150% (1 Day)",
+      "after": "经验加成\n150% (1天)"
+    },
+    {
+      "pid": 11527,
+      "before": "ARE YOU SURE ?",
+      "after": "你确定吗 ？"
+    },
+    {
+      "pid": 11529,
+      "before": "Watch Video Ad &",
+      "after": "直接领取奖励"
+    },
+    {
+      "pid": 11531,
+      "before": "EXIT",
+      "after": "出口"
+    },
+    {
+      "pid": 11539,
+      "before": "ARE YOU SURE ?",
+      "after": "你确定吗 ？"
+    },
+    {
+      "pid": 11548,
+      "before": "Survivor Package",
+      "after": "生存者礼包"
+    },
+    {
+      "pid": 11566,
+      "before": "VIDEO ADS NOT AVAILABLE",
+      "after": "视频广告不可用"
+    },
+    {
+      "pid": 11567,
+      "before": "Claim",
+      "after": "领取"
+    },
+    {
+      "pid": 11591,
+      "before": "REVEAL GUN",
+      "after": "揭晓武器"
+    },
+    {
+      "pid": 11606,
+      "before": "30000 GOLD",
+      "after": "30000 金币"
+    },
+    {
+      "pid": 11607,
+      "before": "Weapon Upgrade",
+      "after": "武器升级"
+    },
+    {
+      "pid": 11609,
+      "before": "LEVEL",
+      "after": "水平"
+    },
+    {
+      "pid": 11616,
+      "before": "LEVEL",
+      "after": "水平"
+    },
+    {
+      "pid": 11648,
+      "before": "465000 GOLD",
+      "after": "465000 金币"
+    },
+    {
+      "pid": 11659,
+      "before": "1000 Cash\n100 Gold",
+      "after": "1000 现金\n100 金币"
+    },
+    {
+      "pid": 11664,
+      "before": "FREE CASH",
+      "after": "免费现金"
+    },
+    {
+      "pid": 11665,
+      "before": "348000 GOLD",
+      "after": "348000 金币"
+    },
+    {
+      "pid": 11672,
+      "before": "465000 GOLD",
+      "after": "465000 金币"
+    },
+    {
+      "pid": 11696,
+      "before": "RANK",
+      "after": "秩"
+    },
+    {
+      "pid": 11724,
+      "before": "Class :",
+      "after": "类别："
+    },
+    {
+      "pid": 11725,
+      "before": "15000 Cash\n1500 Gold",
+      "after": "15000 现金\n1500 金币"
+    },
+    {
+      "pid": 11726,
+      "before": "Rifle",
+      "after": "步枪"
+    },
+    {
+      "pid": 11727,
+      "before": "DIAMOND",
+      "after": "钻石"
+    },
+    {
+      "pid": 11729,
+      "before": "Fuel Vehicle",
+      "after": "为载具加油"
+    },
+    {
+      "pid": 11737,
+      "before": "Today",
+      "after": "今天"
+    },
+    {
+      "pid": 11751,
+      "before": "455000 CASH",
+      "after": "455000 现金"
+    },
+    {
+      "pid": 11752,
+      "before": "CLOSE",
+      "after": "关"
+    },
+    {
+      "pid": 11763,
+      "before": "652500 CASH",
+      "after": "652500 现金"
+    },
+    {
+      "pid": 11764,
+      "before": "",
+      "after": "你还有重生机会！\n重返战场，争夺第一！"
+    },
+    {
+      "pid": 11765,
+      "before": "69000 GOLD",
+      "after": "69000 金币"
+    },
+    {
+      "pid": 11766,
+      "before": "Ballistic Shield",
+      "after": "防弹盾"
+    },
+    {
+      "pid": 11768,
+      "before": "500 EXP",
+      "after": "500 经验值"
+    },
+    {
+      "pid": 11774,
+      "before": "200 GOLD",
+      "after": "200 金币"
+    },
+    {
+      "pid": 11776,
+      "before": "Continue With BATTLE",
+      "after": "继续战斗"
+    },
+    {
+      "pid": 11790,
+      "before": "DAY",
+      "after": "天"
+    },
+    {
+      "pid": 11814,
+      "before": "EQUIP",
+      "after": "装备"
+    },
+    {
+      "pid": 11823,
+      "before": "AXE MODE",
+      "after": "斧头模式"
+    },
+    {
+      "pid": 11829,
+      "before": "VIDEO WATCHED",
+      "after": "视频观看"
+    },
+    {
+      "pid": 11835,
+      "before": "All vs All",
+      "after": "全部与全部"
+    },
+    {
+      "pid": 11839,
+      "before": "DEATH",
+      "after": "死亡"
+    },
+    {
+      "pid": 11859,
+      "before": "Scope8X",
+      "after": "8倍镜"
+    },
+    {
+      "pid": 11878,
+      "before": "VIDEO WATCHED",
+      "after": "视频观看"
+    },
+    {
+      "pid": 11881,
+      "before": "YOU ARE THE",
+      "after": "你是"
+    },
+    {
+      "pid": 11890,
+      "before": "Settings",
+      "after": "设置"
+    },
+    {
+      "pid": 11901,
+      "before": "KILLS",
+      "after": "杀死"
+    },
+    {
+      "pid": 11917,
+      "before": "Grenades x 5",
+      "after": "手雷 x 5"
+    },
+    {
+      "pid": 11921,
+      "before": "RETRY",
+      "after": "重试"
+    },
+    {
+      "pid": 11923,
+      "before": "CREATE SERVER",
+      "after": "创建服务器"
+    },
+    {
+      "pid": 11940,
+      "before": "SILVER CRATE",
+      "after": "白银宝箱"
+    },
+    {
+      "pid": 11945,
+      "before": "DEACTIVE",
+      "after": "去活"
+    },
+    {
+      "pid": 11948,
+      "before": "Update",
+      "after": "更新"
+    },
+    {
+      "pid": 11955,
+      "before": "Your Car fuel is finished. Refill it to drive.",
+      "after": "你的汽车燃料已经完成。重新加油以开车。"
+    },
+    {
+      "pid": 11957,
+      "before": "Swagger Trophy",
+      "after": "昂首阔步的奖杯"
+    },
+    {
+      "pid": 11958,
+      "before": "MediPack & Soundwaves",
+      "after": "医疗包和声波装置"
+    },
+    {
+      "pid": 11959,
+      "before": "Enjoy Playing with New rolled out Update.",
+      "after": "体验新版本内容。"
+    },
+    {
+      "pid": 11962,
+      "before": "Cash & Gold",
+      "after": "现金和金币"
+    },
+    {
+      "pid": 11967,
+      "before": "KILLS",
+      "after": "杀死"
+    },
+    {
+      "pid": 11976,
+      "before": "EXIT",
+      "after": "出口"
+    },
+    {
+      "pid": 11984,
+      "before": "Collect",
+      "after": "搜集"
+    },
+    {
+      "pid": 11997,
+      "before": "25% OFF",
+      "after": "7.5折"
+    },
+    {
+      "pid": 12000,
+      "before": "OFFLINE",
+      "after": "离线"
+    },
+    {
+      "pid": 12010,
+      "before": "Join",
+      "after": "加入"
+    },
+    {
+      "pid": 12014,
+      "before": "DAY",
+      "after": "天"
+    },
+    {
+      "pid": 12018,
+      "before": "Games Played",
+      "after": "玩过的游戏"
+    },
+    {
+      "pid": 12026,
+      "before": "Scope6X",
+      "after": "6倍镜"
+    },
+    {
+      "pid": 12035,
+      "before": "GET FREE DIAMONDS",
+      "after": "领取免费钻石"
+    },
+    {
+      "pid": 12036,
+      "before": "Minigun Ammo",
+      "after": "迷你弹药"
+    },
+    {
+      "pid": 12041,
+      "before": "DAY",
+      "after": "天"
+    },
+    {
+      "pid": 12048,
+      "before": "GRAB IT NOW",
+      "after": "免费获取"
+    },
+    {
+      "pid": 12054,
+      "before": "Pistol Ammo",
+      "after": "手枪弹药"
+    },
+    {
+      "pid": 12056,
+      "before": "Smokebomb x 5",
+      "after": "烟雾弹 x 5"
+    },
+    {
+      "pid": 12061,
+      "before": "ONLINE",
+      "after": "线上"
+    },
+    {
+      "pid": 12076,
+      "before": "SWAGGER'S TROPHY REWARDS",
+      "after": "赃物奖杯奖励"
+    },
+    {
+      "pid": 12085,
+      "before": "CLOSE",
+      "after": "关"
+    },
+    {
+      "pid": 12086,
+      "before": "KILL THE MOST AND SURVIVE TILL END",
+      "after": "杀死最多，直到最后"
+    },
+    {
+      "pid": 12098,
+      "before": "WINS",
+      "after": "胜"
+    },
+    {
+      "pid": 12114,
+      "before": "2070000 CASH",
+      "after": "2070000 现金"
+    },
+    {
+      "pid": 12117,
+      "before": "DAY",
+      "after": "天"
+    },
+    {
+      "pid": 12131,
+      "before": "10000 CASH",
+      "after": "10000 现金"
+    },
+    {
+      "pid": 12139,
+      "before": "DAY",
+      "after": "天"
+    },
+    {
+      "pid": 12143,
+      "before": "Death",
+      "after": "死亡"
+    },
+    {
+      "pid": 12164,
+      "before": "RANK",
+      "after": "秩"
+    },
+    {
+      "pid": 12178,
+      "before": "PROFILE",
+      "after": "轮廓"
+    },
+    {
+      "pid": 12182,
+      "before": "GET 1000 DIAMOND",
+      "after": "领取1000颗钻石"
+    },
+    {
+      "pid": 12187,
+      "before": "YOU GOT",
+      "after": "你得到了"
+    },
+    {
+      "pid": 12190,
+      "before": "250000 CASH",
+      "after": "250000 现金"
+    },
+    {
+      "pid": 12192,
+      "before": "Level",
+      "after": "水平"
+    },
+    {
+      "pid": 12196,
+      "before": "Grenades",
+      "after": "手雷"
+    },
+    {
+      "pid": 12203,
+      "before": "125000 CASH\n37500 GOLD",
+      "after": "125000 现金\n37500 金币"
+    },
+    {
+      "pid": 12204,
+      "before": "312500 CASH\n86250 GOLD",
+      "after": "312500 现金\n86250 金币"
+    },
+    {
+      "pid": 12206,
+      "before": "WEAPON UPGRADED",
+      "after": "武器升级"
+    },
+    {
+      "pid": 12219,
+      "before": "40% OFF",
+      "after": "6折"
+    },
+    {
+      "pid": 12223,
+      "before": "USE 5",
+      "after": "用5"
+    },
+    {
+      "pid": 12239,
+      "before": "DAY",
+      "after": "天"
+    },
+    {
+      "pid": 12240,
+      "before": "5 DIAMOND",
+      "after": "5 钻石"
+    },
+    {
+      "pid": 12250,
+      "before": "Ammo Catagory",
+      "after": "弹药类别"
+    },
+    {
+      "pid": 12254,
+      "before": "Smoke & Soundwave",
+      "after": "烟雾弹和声波装置"
+    },
+    {
+      "pid": 12258,
+      "before": "Launcher Ammo",
+      "after": "发射器弹药"
+    },
+    {
+      "pid": 12274,
+      "before": "SELECT GAME MODE",
+      "after": "选择游戏模式"
+    },
+    {
+      "pid": 12287,
+      "before": "13000 Cash\n1300 Gold",
+      "after": "13000 现金\n1300 金币"
+    },
+    {
+      "pid": 12289,
+      "before": "Video inventory is not available in your territory. So, if you want you can use your 5 diamonds and get it",
+      "after": "您所在地区无法使用视频广告资源。所以，如果你想要你可以使用你的5颗钻石并获得它"
+    },
+    {
+      "pid": 12291,
+      "before": "Watch Video Ad &",
+      "after": "直接领取奖励"
+    },
+    {
+      "pid": 12293,
+      "before": "GET 10 DIAMOND",
+      "after": "领取10颗钻石"
+    },
+    {
+      "pid": 12298,
+      "before": "195000 GOLD",
+      "after": "195000 金币"
+    },
+    {
+      "pid": 12299,
+      "before": "SWAGGER",
+      "after": "昂首阔步"
+    },
+    {
+      "pid": 12310,
+      "before": "100",
+      "after": "免费获取"
+    },
+    {
+      "pid": 12320,
+      "before": "EXP BOOSTER IS DISABLED",
+      "after": "经验加成未启用"
+    },
+    {
+      "pid": 12324,
+      "before": "Cash & Gold",
+      "after": "现金和金币"
+    },
+    {
+      "pid": 12329,
+      "before": "Join",
+      "after": "加入"
+    },
+    {
+      "pid": 12349,
+      "before": "250 CASH",
+      "after": "250 现金"
+    },
+    {
+      "pid": 12352,
+      "before": "Kill",
+      "after": "杀"
+    },
+    {
+      "pid": 12361,
+      "before": "Cash & Gold",
+      "after": "现金和金币"
+    },
+    {
+      "pid": 12372,
+      "before": "Ok",
+      "after": "确定"
+    },
+    {
+      "pid": 12396,
+      "before": "Rifle",
+      "after": "步枪"
+    },
+    {
+      "pid": 12398,
+      "before": "Weapon Upgrade",
+      "after": "武器升级"
+    },
+    {
+      "pid": 12402,
+      "before": "DAY",
+      "after": "天"
+    },
+    {
+      "pid": 12410,
+      "before": "900000 CASH",
+      "after": "900000 现金"
+    },
+    {
+      "pid": 12414,
+      "before": "DAY",
+      "after": "天"
+    },
+    {
+      "pid": 12420,
+      "before": "POWER",
+      "after": "威力"
+    },
+    {
+      "pid": 12436,
+      "before": "2x Claim",
+      "after": "双倍领取"
+    },
+    {
+      "pid": 12440,
+      "before": "DAY",
+      "after": "天"
+    },
+    {
+      "pid": 12446,
+      "before": "NOT ENOUGH DIAMONDS",
+      "after": "钻石不足"
+    },
+    {
+      "pid": 12448,
+      "before": "Play",
+      "after": "玩"
+    },
+    {
+      "pid": 12456,
+      "before": "VIDEO ADS NOT AVAILABLE",
+      "after": "视频广告不可用"
+    },
+    {
+      "pid": 12457,
+      "before": "",
+      "after": "你还有重生机会！\n重返战场，争夺第一！"
+    },
+    {
+      "pid": 12458,
+      "before": "GET 50 DIAMOND",
+      "after": "领取50颗钻石"
+    },
+    {
+      "pid": 12463,
+      "before": "LEVEL",
+      "after": "水平"
+    },
+    {
+      "pid": 12477,
+      "before": "10000 CASH",
+      "after": "10000 现金"
+    },
+    {
+      "pid": 12480,
+      "before": "Claim Round 2X Bonus",
+      "after": "领取双倍对局奖励"
+    },
+    {
+      "pid": 12489,
+      "before": "DAY",
+      "after": "天"
+    },
+    {
+      "pid": 12494,
+      "before": "DAY",
+      "after": "天"
+    },
+    {
+      "pid": 12495,
+      "before": "SWAGGER",
+      "after": "昂首阔步"
+    },
+    {
+      "pid": 12498,
+      "before": "815625 CASH\n187500 GOLD",
+      "after": "815625 现金\n187500 金币"
+    },
+    {
+      "pid": 12499,
+      "before": "700 EnemyDetector",
+      "after": "700 敌人探测器"
+    },
+    {
+      "pid": 12500,
+      "before": "GET 500 DIAMOND",
+      "after": "领取500颗钻石"
+    },
+    {
+      "pid": 12508,
+      "before": "150000 GOLD",
+      "after": "150000 金币"
+    },
+    {
+      "pid": 12513,
+      "before": "Enter Your Room Id",
+      "after": "输入你的房间ID"
+    },
+    {
+      "pid": 12516,
+      "before": "KILLS",
+      "after": "杀死"
+    },
+    {
+      "pid": 12529,
+      "before": "50 EnemyDetector",
+      "after": "50 敌人探测器"
+    },
+    {
+      "pid": 12541,
+      "before": "DAY",
+      "after": "天"
+    },
+    {
+      "pid": 12545,
+      "before": "Bow Ammo",
+      "after": "弓弹药"
+    },
+    {
+      "pid": 12548,
+      "before": "SHOTGUN",
+      "after": "霰弹枪"
+    },
+    {
+      "pid": 12554,
+      "before": "Back",
+      "after": "返回"
+    },
+    {
+      "pid": 12558,
+      "before": "Lobby",
+      "after": "前厅"
+    },
+    {
+      "pid": 12562,
+      "before": "Watch Video Ad &",
+      "after": "直接领取奖励"
+    },
+    {
+      "pid": 12566,
+      "before": "1356250 CASH\n315000 GOLD",
+      "after": "1356250 现金\n315000 金币"
+    },
+    {
+      "pid": 12568,
+      "before": "This is a great opportunity!\u0003\nGrab the double Cash, Gold and Exp.\u0003\u0003\nDon't miss it!!",
+      "after": "领取双倍现金、金币和经验奖励！"
+    },
+    {
+      "pid": 12571,
+      "before": "GET FREE CASH",
+      "after": "领取免费现金"
+    },
+    {
+      "pid": 12573,
+      "before": "Power Pack",
+      "after": "强化礼包"
+    },
+    {
+      "pid": 12580,
+      "before": "NOT ENOUGH CASH",
+      "after": "现金不足"
+    },
+    {
+      "pid": 12583,
+      "before": "CLOSE",
+      "after": "关"
+    },
+    {
+      "pid": 12591,
+      "before": "Join",
+      "after": "加入"
+    },
+    {
+      "pid": 12622,
+      "before": "EARN",
+      "after": "赚"
+    },
+    {
+      "pid": 12627,
+      "before": "Best Surprise Gun",
+      "after": "惊喜武器"
+    },
+    {
+      "pid": 12636,
+      "before": "YOUR BONUS TODAY",
+      "after": "你今天的奖金"
+    },
+    {
+      "pid": 12652,
+      "before": "EXIT",
+      "after": "出口"
+    },
+    {
+      "pid": 12662,
+      "before": "Purchased Successfully",
+      "after": "购买成功"
+    },
+    {
+      "pid": 12665,
+      "before": "REVEAL GUN",
+      "after": "揭晓武器"
+    },
+    {
+      "pid": 12670,
+      "before": "SKIP 10 MIN",
+      "after": "跳过10分钟"
+    },
+    {
+      "pid": 12686,
+      "before": "You received 2000 CASH.",
+      "after": "你获得了2000现金。"
+    },
+    {
+      "pid": 12692,
+      "before": "Watch Video Ad &",
+      "after": "直接领取奖励"
+    },
+    {
+      "pid": 12694,
+      "before": "108000 GOLD",
+      "after": "108000 金币"
+    },
+    {
+      "pid": 12701,
+      "before": "Watch Video Ad &",
+      "after": "直接领取奖励"
+    },
+    {
+      "pid": 12704,
+      "before": "RANK",
+      "after": "秩"
+    },
+    {
+      "pid": 12713,
+      "before": "RENT CRATE",
+      "after": "租箱子"
+    },
+    {
+      "pid": 12726,
+      "before": "FIRE RATE",
+      "after": "射速"
+    },
+    {
+      "pid": 12727,
+      "before": "SWAGGER",
+      "after": "昂首阔步"
+    },
+    {
+      "pid": 12731,
+      "before": "10000 CASH",
+      "after": "10000 现金"
+    },
+    {
+      "pid": 12733,
+      "before": "CLIP",
+      "after": "弹匣容量"
+    },
+    {
+      "pid": 12741,
+      "before": "Ammo Catagory",
+      "after": "弹药类别"
+    },
+    {
+      "pid": 12754,
+      "before": "Propack",
+      "after": "强化礼包"
+    },
+    {
+      "pid": 12761,
+      "before": "6900 GOLD",
+      "after": "6900 金币"
+    },
+    {
+      "pid": 12765,
+      "before": "252000 GOLD",
+      "after": "252000 金币"
+    },
+    {
+      "pid": 12766,
+      "before": "1485000 CASH",
+      "after": "1485000 现金"
+    },
+    {
+      "pid": 12771,
+      "before": "Join",
+      "after": "加入"
+    },
+    {
+      "pid": 12774,
+      "before": "Power Pack\nNot Activated",
+      "after": "强化礼包\n未激活"
+    },
+    {
+      "pid": 12781,
+      "before": "Are you sure ?\nYou will loss your mission Exp.",
+      "after": "你确定吗 ？\n你将失去你的任务Exp。"
+    },
+    {
+      "pid": 12791,
+      "before": "EQUIPPED",
+      "after": "装备"
+    },
+    {
+      "pid": 12807,
+      "before": "SoundWave",
+      "after": "声波装置"
+    },
+    {
+      "pid": 12817,
+      "before": "POWER",
+      "after": "威力"
+    },
+    {
+      "pid": 12824,
+      "before": "RELOAD",
+      "after": "换弹速度"
+    },
+    {
+      "pid": 12826,
+      "before": "FREE",
+      "after": "免费"
+    },
+    {
+      "pid": 12839,
+      "before": "Video ad is not available\u0003 right now. If you retry, I could help you find another one.",
+      "after": "视频广告目前无法使用。如果你重试，我可以帮你找到另一个。"
+    },
+    {
+      "pid": 12841,
+      "before": "GAME PLAYED",
+      "after": "比赛"
+    },
+    {
+      "pid": 12847,
+      "before": "455000 CASH",
+      "after": "455000 现金"
+    },
+    {
+      "pid": 12855,
+      "before": "Try Again",
+      "after": "再试一次"
+    },
+    {
+      "pid": 12863,
+      "before": "GET 25 DIAMONDS",
+      "after": "领取25颗钻石"
+    },
+    {
+      "pid": 12874,
+      "before": "Best Weapon",
+      "after": "最好的武器"
+    },
+    {
+      "pid": 12884,
+      "before": "STORM SURVIVAL",
+      "after": "风暴生存"
+    },
+    {
+      "pid": 12890,
+      "before": "60 MINUTE",
+      "after": "60 分钟"
+    },
+    {
+      "pid": 12900,
+      "before": "652500 CASH",
+      "after": "652500 现金"
+    },
+    {
+      "pid": 12917,
+      "before": "252000 GOLD",
+      "after": "252000 金币"
+    },
+    {
+      "pid": 12919,
+      "before": "Collected",
+      "after": "集"
+    },
+    {
+      "pid": 12932,
+      "before": "Tomorrow",
+      "after": "明天"
+    },
+    {
+      "pid": 12933,
+      "before": "Alive",
+      "after": "存活"
+    },
+    {
+      "pid": 12942,
+      "before": "Best Surprise Gun",
+      "after": "惊喜武器"
+    },
+    {
+      "pid": 12957,
+      "before": "Congratulations",
+      "after": "祝贺"
+    },
+    {
+      "pid": 12958,
+      "before": "COLLECT",
+      "after": "领取"
+    },
+    {
+      "pid": 12970,
+      "before": "All",
+      "after": "全部"
+    },
+    {
+      "pid": 12975,
+      "before": "Informations",
+      "after": "信息"
+    },
+    {
+      "pid": 12980,
+      "before": "Unlock at Level. 5",
+      "after": "5级解锁"
+    },
+    {
+      "pid": 12986,
+      "before": "500 Diamond",
+      "after": "500 钻石"
+    },
+    {
+      "pid": 12990,
+      "before": "RATE NOW!",
+      "after": "现在就评价吧！"
+    },
+    {
+      "pid": 13005,
+      "before": "Crossbow",
+      "after": "弩"
+    },
+    {
+      "pid": 13019,
+      "before": "Storm Survival Power: Let you survive in storm for 30 secs. And power is valid until next gameplay of wining the Swagger Trophy.",
+      "after": "风暴生存力量：让你在风暴中生存30秒。在下一场赢得Swagger奖杯的比赛之前，力量是有效的。"
+    },
+    {
+      "pid": 13024,
+      "before": "1085000 CASH",
+      "after": "1085000 现金"
+    },
+    {
+      "pid": 13032,
+      "before": "FREE UPGRADE",
+      "after": "免费升级"
+    },
+    {
+      "pid": 13040,
+      "before": "No, Later",
+      "after": "不，以后"
+    },
+    {
+      "pid": 13067,
+      "before": "200 GOLD",
+      "after": "200 金币"
+    },
+    {
+      "pid": 13069,
+      "before": "HEADSHOT",
+      "after": "爆头"
+    },
+    {
+      "pid": 13072,
+      "before": "GET FREE GOLD",
+      "after": "领取免费金币"
+    },
+    {
+      "pid": 13073,
+      "before": "Player Id :",
+      "after": "玩家编号："
+    },
+    {
+      "pid": 13087,
+      "before": "DAY",
+      "after": "天"
+    },
+    {
+      "pid": 13094,
+      "before": "Loading Resources..",
+      "after": "加载资源.."
+    },
+    {
+      "pid": 13105,
+      "before": "200 GOLD",
+      "after": "200 金币"
+    },
+    {
+      "pid": 13116,
+      "before": "Name",
+      "after": "名称"
+    },
+    {
+      "pid": 13128,
+      "before": "FREE",
+      "after": "免费"
+    },
+    {
+      "pid": 13145,
+      "before": "Cash & Gold",
+      "after": "现金和金币"
+    },
+    {
+      "pid": 13151,
+      "before": "EXP",
+      "after": "经验值"
+    },
+    {
+      "pid": 13157,
+      "before": "FIRE RATE",
+      "after": "射速"
+    },
+    {
+      "pid": 13158,
+      "before": "100000 CASH",
+      "after": "100000 现金"
+    },
+    {
+      "pid": 13179,
+      "before": "Watch Video Ad &",
+      "after": "直接领取奖励"
+    },
+    {
+      "pid": 13189,
+      "before": "LEVEL",
+      "after": "水平"
+    },
+    {
+      "pid": 13195,
+      "before": "Playzone shrink countdown has started. Tap the map to view the new playzone.\n",
+      "after": "安全区缩小倒计时已开始，打开地图查看新的安全区。\n"
+    },
+    {
+      "pid": 13205,
+      "before": "RANK",
+      "after": "秩"
+    },
+    {
+      "pid": 13215,
+      "before": "All",
+      "after": "全部"
+    },
+    {
+      "pid": 13218,
+      "before": "Watch Video Ad &",
+      "after": "直接领取奖励"
+    },
+    {
+      "pid": 13225,
+      "before": "100",
+      "after": "免费获取"
+    },
+    {
+      "pid": 13233,
+      "before": "Activated",
+      "after": "已激活"
+    },
+    {
+      "pid": 13239,
+      "before": "MY SCORE",
+      "after": "我的分数"
+    },
+    {
+      "pid": 13242,
+      "before": "12000 Cash\n1200 Gold",
+      "after": "12000 现金\n1200 金币"
+    },
+    {
+      "pid": 13248,
+      "before": "Primary Gun Name",
+      "after": "主武器名称"
+    },
+    {
+      "pid": 13249,
+      "before": "5000 Cash\n500 Gold",
+      "after": "5000 现金\n500 金币"
+    },
+    {
+      "pid": 13250,
+      "before": "MediPack x 5\nGrnade x 5\nSoundwave x 5",
+      "after": "医疗包 x 5\n手雷 x 5\n声波装置 x 5"
+    },
+    {
+      "pid": 13257,
+      "before": "LOBBY",
+      "after": "前厅"
+    },
+    {
+      "pid": 13260,
+      "before": "REWARD",
+      "after": "奖励"
+    },
+    {
+      "pid": 13269,
+      "before": "Back",
+      "after": "返回"
+    },
+    {
+      "pid": 13272,
+      "before": "VICTORY",
+      "after": "胜利"
+    },
+    {
+      "pid": 13281,
+      "before": "BRONZE CRATE",
+      "after": "青铜宝箱"
+    },
+    {
+      "pid": 13286,
+      "before": "45 MINUTE",
+      "after": "45 分钟"
+    },
+    {
+      "pid": 13307,
+      "before": "DAY",
+      "after": "天"
+    },
+    {
+      "pid": 13319,
+      "before": "Watch Video Ad &",
+      "after": "直接领取奖励"
+    },
+    {
+      "pid": 13326,
+      "before": "UPGRADE TIME LEFT",
+      "after": "升级时间还剩下"
+    },
+    {
+      "pid": 13333,
+      "before": "Informations",
+      "after": "信息"
+    },
+    {
+      "pid": 13353,
+      "before": "MediPack x 5\nSoundwave x 5",
+      "after": "医疗包 x 5\n声波装置 x 5"
+    },
+    {
+      "pid": 13369,
+      "before": "Make sure you activate your Power Pack to kill your rivals easily and be the last survivor.",
+      "after": "激活强化礼包，提升战斗能力，争取成为最后的生存者。"
+    },
+    {
+      "pid": 13376,
+      "before": "COLLECT",
+      "after": "领取"
+    },
+    {
+      "pid": 13382,
+      "before": "10$",
+      "after": "免费获取"
+    },
+    {
+      "pid": 13383,
+      "before": "GOLD",
+      "after": "金币"
+    },
+    {
+      "pid": 13387,
+      "before": "No",
+      "after": "没有"
+    },
+    {
+      "pid": 13393,
+      "before": "900000 CASH",
+      "after": "900000 现金"
+    },
+    {
+      "pid": 13397,
+      "before": "INTERNET CONNECTION",
+      "after": "网络连接"
+    },
+    {
+      "pid": 13404,
+      "before": "YOU RECEIVED",
+      "after": "你收到"
+    },
+    {
+      "pid": 13406,
+      "before": "EQUIP",
+      "after": "装备"
+    },
+    {
+      "pid": 13420,
+      "before": "10 Diamonds",
+      "after": "10 钻石"
+    },
+    {
+      "pid": 13427,
+      "before": "GET 3 DIAMONDS",
+      "after": "领取3颗钻石"
+    },
+    {
+      "pid": 13430,
+      "before": "EQUIP",
+      "after": "装备"
+    },
+    {
+      "pid": 13443,
+      "before": "CLOSE",
+      "after": "关"
+    },
+    {
+      "pid": 13445,
+      "before": "Enjoying The Swag Shooter?",
+      "after": "享受赃物射手？"
+    },
+    {
+      "pid": 13455,
+      "before": "80% OFF",
+      "after": "2折"
+    },
+    {
+      "pid": 13456,
+      "before": "55% OFF",
+      "after": "4.5折"
+    },
+    {
+      "pid": 13469,
+      "before": "Armory",
+      "after": "军械库"
+    },
+    {
+      "pid": 13472,
+      "before": "GET 100 DIAMONDS",
+      "after": "领取100颗钻石"
+    },
+    {
+      "pid": 13478,
+      "before": "GET 1 DIAMOND",
+      "after": "领取1颗钻石"
+    },
+    {
+      "pid": 13483,
+      "before": "EXP Booster Pack",
+      "after": "经验加成礼包"
+    },
+    {
+      "pid": 13492,
+      "before": "DAY",
+      "after": "天"
+    },
+    {
+      "pid": 13495,
+      "before": "INTERNET CONNECTION",
+      "after": "网络连接"
+    },
+    {
+      "pid": 13496,
+      "before": "SWAGGER",
+      "after": "昂首阔步"
+    },
+    {
+      "pid": 13499,
+      "before": "RENT FOR 10 MIN",
+      "after": "租10分钟"
+    },
+    {
+      "pid": 13500,
+      "before": "GET 100 DIAMOND",
+      "after": "领取100颗钻石"
+    },
+    {
+      "pid": 13511,
+      "before": "SubMachineGun Ammo",
+      "after": "冲锋枪弹药"
+    },
+    {
+      "pid": 13519,
+      "before": "Activate Power Pack",
+      "after": "激活强化礼包"
+    },
+    {
+      "pid": 13531,
+      "before": "Equip",
+      "after": "装备"
+    },
+    {
+      "pid": 13533,
+      "before": "FIRE RATE",
+      "after": "射速"
+    },
+    {
+      "pid": 13549,
+      "before": "Watch Video Ad &",
+      "after": "直接领取奖励"
+    },
+    {
+      "pid": 13562,
+      "before": "Please do rate us.",
+      "after": "请给我们打分。"
+    },
+    {
+      "pid": 13567,
+      "before": "GET 500 DIAMONDS",
+      "after": "领取500颗钻石"
+    },
+    {
+      "pid": 13573,
+      "before": "Assult Rifle",
+      "after": "突击步枪"
+    },
+    {
+      "pid": 13575,
+      "before": "CLIP",
+      "after": "弹匣容量"
+    },
+    {
+      "pid": 13580,
+      "before": "CLIP",
+      "after": "弹匣容量"
+    },
+    {
+      "pid": 13581,
+      "before": "EXP BOOSTER IS DISABLED",
+      "after": "经验加成未启用"
+    },
+    {
+      "pid": 13584,
+      "before": "DAY",
+      "after": "天"
+    },
+    {
+      "pid": 13588,
+      "before": "The Royal Rider",
+      "after": "皇家骑士"
+    },
+    {
+      "pid": 13591,
+      "before": "108000 GOLD",
+      "after": "108000 金币"
+    },
+    {
+      "pid": 13593,
+      "before": "Assult Rifle",
+      "after": "突击步枪"
+    },
+    {
+      "pid": 13595,
+      "before": "SWAGGER",
+      "after": "昂首阔步"
+    },
+    {
+      "pid": 13609,
+      "before": "45% OFF",
+      "after": "5.5折"
+    },
+    {
+      "pid": 13614,
+      "before": "Power Pack",
+      "after": "强化礼包"
+    },
+    {
+      "pid": 13617,
+      "before": "SmokeBomb",
+      "after": "烟雾弹"
+    },
+    {
+      "pid": 13619,
+      "before": "250000 CASH",
+      "after": "250000 现金"
+    },
+    {
+      "pid": 13622,
+      "before": "NOT ENOUGH GOLD",
+      "after": "金币不足"
+    },
+    {
+      "pid": 13628,
+      "before": "KILLS",
+      "after": "杀死"
+    },
+    {
+      "pid": 13634,
+      "before": "DEFEAT",
+      "after": "打败"
+    },
+    {
+      "pid": 13653,
+      "before": "YOU RECEIVED",
+      "after": "你收到"
+    },
+    {
+      "pid": 13656,
+      "before": "",
+      "after": "你还有重生机会！\n重返战场，争夺第一！"
+    },
+    {
+      "pid": 13668,
+      "before": "Grenades",
+      "after": "手雷"
+    },
+    {
+      "pid": 13678,
+      "before": "VIDEO WATCHED",
+      "after": "视频观看"
+    },
+    {
+      "pid": 13680,
+      "before": "50 GOLD",
+      "after": "50 金币"
+    },
+    {
+      "pid": 13688,
+      "before": "500 Diamond",
+      "after": "500 钻石"
+    },
+    {
+      "pid": 13692,
+      "before": "EXP Booster",
+      "after": "经验加成"
+    },
+    {
+      "pid": 13704,
+      "before": "GET 10 DIAMONDS",
+      "after": "领取10颗钻石"
+    },
+    {
+      "pid": 13707,
+      "before": "300 EnemyDetector",
+      "after": "300 敌人探测器"
+    },
+    {
+      "pid": 13713,
+      "before": "Game Starts In",
+      "after": "游戏开始于"
+    },
+    {
+      "pid": 13725,
+      "before": "Name",
+      "after": "名称"
+    },
+    {
+      "pid": 13726,
+      "before": "Collect",
+      "after": "搜集"
+    },
+    {
+      "pid": 13728,
+      "before": "Watch Video Ad &",
+      "after": "直接领取奖励"
+    },
+    {
+      "pid": 13741,
+      "before": "Watch Video Ad &",
+      "after": "直接领取奖励"
+    },
+    {
+      "pid": 13748,
+      "before": "Level Upgrade",
+      "after": "级别升级"
+    },
+    {
+      "pid": 13760,
+      "before": "Signature ",
+      "after": "签名"
+    },
+    {
+      "pid": 13768,
+      "before": "100",
+      "after": "免费获取"
+    },
+    {
+      "pid": 13771,
+      "before": "FREE MODE",
+      "after": "自由模式"
+    },
+    {
+      "pid": 13773,
+      "before": "Kills",
+      "after": "杀死"
+    },
+    {
+      "pid": 13778,
+      "before": "ASIA",
+      "after": "亚洲"
+    },
+    {
+      "pid": 13785,
+      "before": "Cash & Gold",
+      "after": "现金和金币"
+    },
+    {
+      "pid": 13786,
+      "before": "Flashbomb x 5",
+      "after": "闪光弹 x 5"
+    },
+    {
+      "pid": 13791,
+      "before": "KNIFE MODE",
+      "after": "匕首模式"
+    },
+    {
+      "pid": 13795,
+      "before": "10000 Cash\n1000 Gold",
+      "after": "10000 现金\n1000 金币"
+    },
+    {
+      "pid": 13805,
+      "before": "Waiting for other players..",
+      "after": "等待其他玩家.."
+    },
+    {
+      "pid": 13807,
+      "before": "Drive In",
+      "after": "驶入"
+    },
+    {
+      "pid": 13810,
+      "before": "(Free)",
+      "after": "（免费）"
+    },
+    {
+      "pid": 13825,
+      "before": "Death",
+      "after": "死亡"
+    },
+    {
+      "pid": 13833,
+      "before": "STORE",
+      "after": "商店"
+    },
+    {
+      "pid": 13847,
+      "before": "",
+      "after": "你还有重生机会！\n重返战场，争夺第一！"
+    },
+    {
+      "pid": 13851,
+      "before": "Share",
+      "after": "分享"
+    },
+    {
+      "pid": 13861,
+      "before": "FREE CRATE",
+      "after": "免费宝箱"
+    },
+    {
+      "pid": 13863,
+      "before": "This is a unique opportunity!\u0003\nIf you leave, I might not be able to\u0003 get you an offer like this again.\u0003\u0003\n\nDon't miss it!!",
+      "after": "这是一次难得的机会！\n如果你离开，我可能无法再次给你这样的报价。\n\n不要错过!!"
+    },
+    {
+      "pid": 13866,
+      "before": "CASH",
+      "after": "现金"
+    },
+    {
+      "pid": 13876,
+      "before": "SWAGGER",
+      "after": "昂首阔步"
+    },
+    {
+      "pid": 13881,
+      "before": "LEAVE",
+      "after": "离开"
+    },
+    {
+      "pid": 13890,
+      "before": "348000 GOLD",
+      "after": "348000 金币"
+    },
+    {
+      "pid": 13898,
+      "before": "50% OFF",
+      "after": "5折"
+    },
+    {
+      "pid": 13919,
+      "before": "TO BECOME",
+      "after": "成为"
+    },
+    {
+      "pid": 13922,
+      "before": "CLIP",
+      "after": "弹匣容量"
+    },
+    {
+      "pid": 13931,
+      "before": "DAY",
+      "after": "天"
+    },
+    {
+      "pid": 13934,
+      "before": "Activate Now!",
+      "after": "立即激活"
+    },
+    {
+      "pid": 13964,
+      "before": "Best Surprise Gun",
+      "after": "惊喜武器"
+    },
+    {
+      "pid": 13967,
+      "before": "YOU'VE BEEN PROMOTED",
+      "after": "你已经被提升了"
+    },
+    {
+      "pid": 13995,
+      "before": "",
+      "after": "你还有重生机会！\n重返战场，争夺第一！"
+    },
+    {
+      "pid": 13996,
+      "before": "ENEMY DETECTOR",
+      "after": "敌人探测器"
+    },
+    {
+      "pid": 14000,
+      "before": "Watch Video Ad &",
+      "after": "直接领取奖励"
+    },
+    {
+      "pid": 14006,
+      "before": "OK",
+      "after": "好"
+    },
+    {
+      "pid": 14014,
+      "before": "DAY",
+      "after": "天"
+    },
+    {
+      "pid": 14031,
+      "before": "Rent Gun",
+      "after": "租枪"
+    },
+    {
+      "pid": 14032,
+      "before": "All",
+      "after": "全部"
+    },
+    {
+      "pid": 14037,
+      "before": "200 EnemyDetector",
+      "after": "200 敌人探测器"
+    },
+    {
+      "pid": 14038,
+      "before": "30% OFF",
+      "after": "7折"
+    },
+    {
+      "pid": 14040,
+      "before": "Restricting the Play Area!",
+      "after": "限制游戏区！"
+    },
+    {
+      "pid": 14045,
+      "before": "CLOSE",
+      "after": "关"
+    },
+    {
+      "pid": 14051,
+      "before": "DAILY BONUS",
+      "after": "每日奖金"
+    },
+    {
+      "pid": 14070,
+      "before": "30000 GOLD",
+      "after": "30000 金币"
+    },
+    {
+      "pid": 14075,
+      "before": "Yes",
+      "after": "是"
+    },
+    {
+      "pid": 14077,
+      "before": "YOU RECEIVED",
+      "after": "你收到"
+    },
+    {
+      "pid": 14079,
+      "before": "Achivements",
+      "after": "成就"
+    },
+    {
+      "pid": 14084,
+      "before": "500 EnemyDetector",
+      "after": "500 敌人探测器"
+    },
+    {
+      "pid": 14087,
+      "before": "CONGRATULATIONS",
+      "after": "祝贺"
+    },
+    {
+      "pid": 14092,
+      "before": "Save yourself! Loot hole closes in 10 secs.",
+      "after": "救你自己！ Loot hole在10秒内关闭。"
+    },
+    {
+      "pid": 14094,
+      "before": "PLATINUM CRATE",
+      "after": "铂金宝箱"
+    },
+    {
+      "pid": 14101,
+      "before": "Continue",
+      "after": "继续"
+    },
+    {
+      "pid": 14113,
+      "before": "25% OFF",
+      "after": "7.5折"
+    },
+    {
+      "pid": 14115,
+      "before": "All",
+      "after": "全部"
+    },
+    {
+      "pid": 14131,
+      "before": "",
+      "after": "你还有重生机会！\n重返战场，争夺第一！"
+    },
+    {
+      "pid": 14152,
+      "before": "Smoke x 5\nSoundwave x 5",
+      "after": "烟雾弹 x 5\n声波装置 x 5"
+    },
+    {
+      "pid": 14153,
+      "before": "EXP Booster\n150% (2 Hours)",
+      "after": "经验加成\n150% (2小时)"
+    },
+    {
+      "pid": 14157,
+      "before": "CRATE",
+      "after": "宝箱"
+    },
+    {
+      "pid": 14173,
+      "before": "FREE UPGRADE",
+      "after": "免费升级"
+    },
+    {
+      "pid": 14182,
+      "before": "100 EnemyDetector",
+      "after": "100 敌人探测器"
+    },
+    {
+      "pid": 14183,
+      "before": "Restricting play area in 10 sec!",
+      "after": "安全区将在10秒后缩小！"
+    },
+    {
+      "pid": 14186,
+      "before": "YOU GOT",
+      "after": "你得到了"
+    },
+    {
+      "pid": 14192,
+      "before": "Shotgun Ammo",
+      "after": "猎枪弹药"
+    },
+    {
+      "pid": 14196,
+      "before": "RELOAD",
+      "after": "换弹速度"
+    },
+    {
+      "pid": 14200,
+      "before": "Class :",
+      "after": "类别："
+    },
+    {
+      "pid": 14206,
+      "before": "UPGRADE",
+      "after": "升级"
+    },
+    {
+      "pid": 14207,
+      "before": "2x Claim Reward",
+      "after": "领取双倍奖励"
+    },
+    {
+      "pid": 14211,
+      "before": "DAY",
+      "after": "天"
+    },
+    {
+      "pid": 14220,
+      "before": "Nothing to Claim",
+      "after": "暂无可领取奖励"
+    },
+    {
+      "pid": 14225,
+      "before": "Grenades x 10",
+      "after": "手雷 x 10"
+    },
+    {
+      "pid": 14244,
+      "before": "30 $",
+      "after": "免费解锁"
+    },
+    {
+      "pid": 14253,
+      "before": "FREE GOLD",
+      "after": "免费金币"
+    },
+    {
+      "pid": 14256,
+      "before": "2x Claim",
+      "after": "双倍领取"
+    },
+    {
+      "pid": 14265,
+      "before": "400 EnemyDetector",
+      "after": "400 敌人探测器"
+    },
+    {
+      "pid": 14267,
+      "before": "",
+      "after": "你还有重生机会！\n重返战场，争夺第一！"
+    },
+    {
+      "pid": 14276,
+      "before": "Watch Video Ad &",
+      "after": "直接领取奖励"
+    },
+    {
+      "pid": 14299,
+      "before": "Level",
+      "after": "水平"
+    },
+    {
+      "pid": 14302,
+      "before": "Best Surprise Gun",
+      "after": "惊喜武器"
+    },
+    {
+      "pid": 14312,
+      "before": "DAY",
+      "after": "天"
+    },
+    {
+      "pid": 14333,
+      "before": "CLOSE",
+      "after": "关"
+    },
+    {
+      "pid": 14338,
+      "before": "EXP Booster",
+      "after": "经验加成"
+    },
+    {
+      "pid": 14339,
+      "before": "UPDATE AVAILABLE",
+      "after": "更新可用"
+    },
+    {
+      "pid": 14342,
+      "before": "COPPER CRATE",
+      "after": "铜制宝箱"
+    },
+    {
+      "pid": 14343,
+      "before": "STORM SURVIVAL",
+      "after": "风暴生存"
+    },
+    {
+      "pid": 14346,
+      "before": "DAY",
+      "after": "天"
+    },
+    {
+      "pid": 14347,
+      "before": "ENEMY DETECTOR",
+      "after": "敌人探测器"
+    },
+    {
+      "pid": 14361,
+      "before": "DAY",
+      "after": "天"
+    },
+    {
+      "pid": 14369,
+      "before": "Boombastic Pack",
+      "after": "爆破礼包"
+    },
+    {
+      "pid": 14381,
+      "before": "KILLS",
+      "after": "杀死"
+    },
+    {
+      "pid": 14385,
+      "before": "VIDEO WATCHED",
+      "after": "视频观看"
+    },
+    {
+      "pid": 14401,
+      "before": "195000 GOLD",
+      "after": "195000 金币"
+    },
+    {
+      "pid": 14404,
+      "before": "Round Complete",
+      "after": "圆完成"
+    },
+    {
+      "pid": 14413,
+      "before": "ADS CRATE",
+      "after": "奖励宝箱"
+    },
+    {
+      "pid": 14415,
+      "before": "DEATH MATCH",
+      "after": "死亡比赛"
+    },
+    {
+      "pid": 14416,
+      "before": "30 MINUTE",
+      "after": "30 分钟"
+    },
+    {
+      "pid": 14429,
+      "before": "EQUIPPED",
+      "after": "装备"
+    },
+    {
+      "pid": 14436,
+      "before": "1085000 CASH",
+      "after": "1085000 现金"
+    },
+    {
+      "pid": 14437,
+      "before": "65% OFF",
+      "after": "3.5折"
+    },
+    {
+      "pid": 14451,
+      "before": "8000 Cash\n800 Gold",
+      "after": "8000 现金\n800 金币"
+    },
+    {
+      "pid": 14453,
+      "before": "Cash & Gold",
+      "after": "现金和金币"
+    },
+    {
+      "pid": 14457,
+      "before": "568750 CASH\n135000 GOLD",
+      "after": "568750 现金\n135000 金币"
+    },
+    {
+      "pid": 14469,
+      "before": "OK",
+      "after": "好"
+    },
+    {
+      "pid": 14489,
+      "before": "CONTINUE",
+      "after": "继续"
+    },
+    {
+      "pid": 14497,
+      "before": "GET 1000 DIAMONDS",
+      "after": "领取1000颗钻石"
+    },
+    {
+      "pid": 14498,
+      "before": "Reset To Default",
+      "after": "重置为默认"
+    },
+    {
+      "pid": 14500,
+      "before": "MediPack x 10",
+      "after": "医疗包 x 10"
+    },
+    {
+      "pid": 14510,
+      "before": "Statistics",
+      "after": "统计"
+    },
+    {
+      "pid": 14524,
+      "before": "OPTION MENU",
+      "after": "选项菜单"
+    },
+    {
+      "pid": 14530,
+      "before": "DAY",
+      "after": "天"
+    },
+    {
+      "pid": 14533,
+      "before": "CLOSE",
+      "after": "关"
+    },
+    {
+      "pid": 14538,
+      "before": "You received 2000 CASH.",
+      "after": "你获得了2000现金。"
+    },
+    {
+      "pid": 14542,
+      "before": "SWAGGER",
+      "after": "昂首阔步"
+    },
+    {
+      "pid": 14547,
+      "before": "LEAVE",
+      "after": "离开"
+    },
+    {
+      "pid": 14552,
+      "before": "LEAVE",
+      "after": "离开"
+    },
+    {
+      "pid": 14567,
+      "before": "CLOSE",
+      "after": "关"
+    },
+    {
+      "pid": 14576,
+      "before": "LEAVE",
+      "after": "离开"
+    },
+    {
+      "pid": 14582,
+      "before": "EQUIPPED",
+      "after": "装备"
+    },
+    {
+      "pid": 14584,
+      "before": "YOU GOT",
+      "after": "你得到了"
+    },
+    {
+      "pid": 14587,
+      "before": "Watch Video Ad &",
+      "after": "直接领取奖励"
+    },
+    {
+      "pid": 14589,
+      "before": "500 Diamond",
+      "after": "500 钻石"
+    },
+    {
+      "pid": 14590,
+      "before": "EXP Booster\n200% (24 Hours)",
+      "after": "经验加成\n200% (24小时)"
+    },
+    {
+      "pid": 14592,
+      "before": "LEAVE",
+      "after": "离开"
+    },
+    {
+      "pid": 14595,
+      "before": "Yes",
+      "after": "是"
+    },
+    {
+      "pid": 14599,
+      "before": "(1 Hour)",
+      "after": "（1小时）"
+    },
+    {
+      "pid": 14613,
+      "before": "FREE DIAMOND",
+      "after": "免费钻石"
+    },
+    {
+      "pid": 14617,
+      "before": "Rent Gun",
+      "after": "租枪"
+    },
+    {
+      "pid": 14627,
+      "before": "Sniper Ammo",
+      "after": "狙击弹药"
+    },
+    {
+      "pid": 14639,
+      "before": "GET 50 DIAMONDS",
+      "after": "领取50颗钻石"
+    },
+    {
+      "pid": 14642,
+      "before": "Finish",
+      "after": "完"
+    },
+    {
+      "pid": 14648,
+      "before": "This is a unique opportunity!\u0003 Don't miss it! \nGet free Pro-pack, EXP Booster, Remove 2x Claim & Exit Ads!",
+      "after": "免费获取强化礼包和经验加成，免除双倍领奖和退出时的广告。"
+    },
+    {
+      "pid": 14651,
+      "before": "DAY",
+      "after": "天"
+    },
+    {
+      "pid": 14659,
+      "before": "OK",
+      "after": "好"
+    },
+    {
+      "pid": 14677,
+      "before": "POWER",
+      "after": "威力"
+    },
+    {
+      "pid": 14683,
+      "before": "Share Your Room Id",
+      "after": "分享你的房间ID"
+    },
+    {
+      "pid": 14704,
+      "before": "REMOVE ADVERTISEMENTS",
+      "after": "删除广告"
+    },
+    {
+      "pid": 14710,
+      "before": "Informations",
+      "after": "信息"
+    },
+    {
+      "pid": 14727,
+      "before": "GUNS",
+      "after": "武器"
+    },
+    {
+      "pid": 14730,
+      "before": "DAY",
+      "after": "天"
+    },
+    {
+      "pid": 14744,
+      "before": "MediPack",
+      "after": "医疗包"
+    },
+    {
+      "pid": 14747,
+      "before": "EQUIP",
+      "after": "装备"
+    },
+    {
+      "pid": 14754,
+      "before": "1485000 CASH",
+      "after": "1485000 现金"
+    },
+    {
+      "pid": 14756,
+      "before": "Watch Video Ad &",
+      "after": "直接领取奖励"
+    },
+    {
+      "pid": 14774,
+      "before": "Rent Gun",
+      "after": "租枪"
+    },
+    {
+      "pid": 14782,
+      "before": "Assult Rifle",
+      "after": "突击步枪"
+    },
+    {
+      "pid": 14793,
+      "before": "",
+      "after": "你还有重生机会！\n重返战场，争夺第一！"
+    },
+    {
+      "pid": 14805,
+      "before": "GET 3 DIAMOND",
+      "after": "领取3颗钻石"
+    },
+    {
+      "pid": 14816,
+      "before": "25% OFF",
+      "after": "7.5折"
+    },
+    {
+      "pid": 14821,
+      "before": "Basic",
+      "after": "基本"
+    },
+    {
+      "pid": 14829,
+      "before": "Congratulations, Your purchase \nis successfully done.",
+      "after": "恭喜，您的购买\n成功完成。"
+    },
+    {
+      "pid": 14841,
+      "before": "Watch Video Ad &",
+      "after": "直接领取奖励"
+    },
+    {
+      "pid": 14870,
+      "before": "KILLS",
+      "after": "杀死"
+    },
+    {
+      "pid": 14874,
+      "before": "MediPack",
+      "after": "医疗包"
+    },
+    {
+      "pid": 14891,
+      "before": "50 GOLD",
+      "after": "50 金币"
+    },
+    {
+      "pid": 14893,
+      "before": "FREE DIAMOND",
+      "after": "免费钻石"
+    },
+    {
+      "pid": 14905,
+      "before": "REMAINING UPGRADE",
+      "after": "剩下的升级"
+    },
+    {
+      "pid": 14906,
+      "before": "TEAM",
+      "after": "球队"
+    },
+    {
+      "pid": 14910,
+      "before": "Team",
+      "after": "球队"
+    },
+    {
+      "pid": 14917,
+      "before": "Name",
+      "after": "名称"
+    },
+    {
+      "pid": 14927,
+      "before": "GET 1 DIAMOND",
+      "after": "领取1颗钻石"
+    },
+    {
+      "pid": 14938,
+      "before": "Enter Room Id...",
+      "after": "输入房间ID ..."
+    },
+    {
+      "pid": 14944,
+      "before": "You have 3 lives to achieve the target. Play wisely!",
+      "after": "你有3个生命来实现目标。明智地玩！"
+    },
+    {
+      "pid": 14950,
+      "before": "RELOAD",
+      "after": "换弹速度"
+    },
+    {
+      "pid": 14962,
+      "before": "SETTINGS",
+      "after": "设置"
+    },
+    {
+      "pid": 14969,
+      "before": "YOU HAVE UNLOCKED",
+      "after": "你解锁了"
+    },
+    {
+      "pid": 14972,
+      "before": "Claim Level 2X Bonus",
+      "after": "领取双倍升级奖励"
+    },
+    {
+      "pid": 14977,
+      "before": "You will take damage continuously if you step out of the blue circle.\r",
+      "after": "如果你走出蓝色圆圈，你将不断受到伤害。\r"
+    },
+    {
+      "pid": 14979,
+      "before": "VIDEO WATCHED",
+      "after": "视频观看"
+    },
+    {
+      "pid": 14988,
+      "before": "BUY NOW",
+      "after": "立即购买"
+    },
+    {
+      "pid": 14990,
+      "before": "Watch Video Ad &",
+      "after": "直接领取奖励"
+    },
+    {
+      "pid": 14993,
+      "before": "Cash & Gold",
+      "after": "现金和金币"
+    },
+    {
+      "pid": 14995,
+      "before": "Weapon Upgrade",
+      "after": "武器升级"
+    },
+    {
+      "pid": 15001,
+      "before": "SNIPER MODE",
+      "after": "狙击模式"
+    },
+    {
+      "pid": 15005,
+      "before": "POWER",
+      "after": "威力"
+    },
+    {
+      "pid": 15011,
+      "before": "Power Pack",
+      "after": "强化礼包"
+    },
+    {
+      "pid": 15015,
+      "before": "",
+      "after": "你还有重生机会！\n重返战场，争夺第一！"
+    },
+    {
+      "pid": 15020,
+      "before": "RELOAD",
+      "after": "换弹速度"
+    },
+    {
+      "pid": 15049,
+      "before": "DAY",
+      "after": "天"
+    },
+    {
+      "pid": 15055,
+      "before": "SPECIAL GUN",
+      "after": "特种枪"
+    },
+    {
+      "pid": 15076,
+      "before": "Team",
+      "after": "球队"
+    },
+    {
+      "pid": 15078,
+      "before": "Loading...",
+      "after": "载入中..."
+    },
+    {
+      "pid": 15085,
+      "before": "",
+      "after": "你还有重生机会！\n重返战场，争夺第一！"
+    },
+    {
+      "pid": 15089,
+      "before": "Loading...",
+      "after": "载入中..."
+    },
+    {
+      "pid": 15090,
+      "before": "VERSION",
+      "after": "版"
+    },
+    {
+      "pid": 15091,
+      "before": "SERVER",
+      "after": "服务器"
+    },
+    {
+      "pid": 15096,
+      "before": "Checking Update Data...",
+      "after": "正在检查更新……"
+    },
+    {
+      "pid": 15101,
+      "before": "",
+      "after": "你还有重生机会！\n重返战场，争夺第一！"
+    },
+    {
+      "pid": 15116,
+      "before": "REMOVE ALL ADS",
+      "after": "移除全部广告"
+    },
+    {
+      "pid": 15121,
+      "before": "ENEMY DETECTOR",
+      "after": "敌人探测器"
+    },
+    {
+      "pid": 15122,
+      "before": "Buy Now!",
+      "after": "立即购买"
+    },
+    {
+      "pid": 15127,
+      "before": "ARMORY",
+      "after": "军械库"
+    },
+    {
+      "pid": 15137,
+      "before": "Buy Now!",
+      "after": "立即购买"
+    },
+    {
+      "pid": 15169,
+      "before": "DEACTIVATED!",
+      "after": "停用！"
+    },
+    {
+      "pid": 15173,
+      "before": "EXP BOOSTER PACK",
+      "after": "经验加成礼包"
+    },
+    {
+      "pid": 15187,
+      "before": "Activate Now",
+      "after": "立即激活"
+    },
+    {
+      "pid": 15207,
+      "before": "CHARACTER",
+      "after": "角色"
+    },
+    {
+      "pid": 15217,
+      "before": "Watch Video Ad &",
+      "after": "直接领取奖励"
+    },
+    {
+      "pid": 15226,
+      "before": "Select Mode",
+      "after": "选择模式"
+    },
+    {
+      "pid": 15229,
+      "before": "Watch Video Ad &",
+      "after": "直接领取奖励"
+    },
+    {
+      "pid": 15234,
+      "before": "EXP BOOSTER PACK",
+      "after": "经验加成礼包"
+    },
+    {
+      "pid": 15241,
+      "before": "BATTLE",
+      "after": "战斗"
+    },
+    {
+      "pid": 15242,
+      "before": "POWER PACK",
+      "after": "强化礼包"
+    },
+    {
+      "pid": 15250,
+      "before": "EXP Booster",
+      "after": "经验加成"
+    },
+    {
+      "pid": 15252,
+      "before": "POWER PACK",
+      "after": "强化礼包"
+    },
+    {
+      "pid": 15256,
+      "before": "Create",
+      "after": "创建"
+    },
+    {
+      "pid": 15257,
+      "before": "OFFLINE",
+      "after": "离线"
+    },
+    {
+      "pid": 15258,
+      "before": "ENEMY DETECTOR",
+      "after": "敌人探测器"
+    },
+    {
+      "pid": 15263,
+      "before": "EXIT",
+      "after": "出口"
+    },
+    {
+      "pid": 15278,
+      "before": "Asia",
+      "after": "亚洲"
+    },
+    {
+      "pid": 15281,
+      "before": "Buy Now!",
+      "after": "立即购买"
+    },
+    {
+      "pid": 15290,
+      "before": "SETTINGS",
+      "after": "设置"
+    },
+    {
+      "pid": 15293,
+      "before": "Boost Exp",
+      "after": "经验加成"
+    },
+    {
+      "pid": 15302,
+      "before": "Join",
+      "after": "加入"
+    },
+    {
+      "pid": 15311,
+      "before": "STORE",
+      "after": "商店"
+    },
+    {
+      "pid": 15315,
+      "before": "Watch Video Ad &",
+      "after": "直接领取奖励"
+    },
+    {
+      "pid": 15320,
+      "before": "Get 2 Free!",
+      "after": "免费领取两个"
+    },
+    {
+      "pid": 15323,
+      "before": "Activate Now!",
+      "after": "立即激活"
+    },
+    {
+      "pid": 15327,
+      "before": "",
+      "after": "你还有重生机会！\n重返战场，争夺第一！"
+    },
+    {
+      "pid": 15331,
+      "before": "Unlock at Lv. 5",
+      "after": "5级解锁"
+    },
+    {
+      "pid": 15334,
+      "before": "TEAM DEATH MATCH",
+      "after": "团队死亡比赛"
+    },
+    {
+      "pid": 15340,
+      "before": "Private Server",
+      "after": "私人服务器"
+    },
+    {
+      "pid": 15348,
+      "before": "10000 CASH",
+      "after": "10000 现金"
+    },
+    {
+      "pid": 15360,
+      "before": "CLAIM ROUND 2X BONUS",
+      "after": "领取双倍对局奖励"
+    },
+    {
+      "pid": 15361,
+      "before": "Watch Video Ad &",
+      "after": "直接领取奖励"
+    },
+    {
+      "pid": 15367,
+      "before": "200 GOLD",
+      "after": "200 金币"
+    },
+    {
+      "pid": 15368,
+      "before": "CLAIM",
+      "after": "领取"
+    },
+    {
+      "pid": 15372,
+      "before": "500 EXP",
+      "after": "500 经验值"
+    },
+    {
+      "pid": 15375,
+      "before": "2X CLAIM",
+      "after": "双倍领取"
+    },
+    {
+      "pid": 15377,
+      "before": "500 DIAMONDS",
+      "after": "500 钻石"
+    },
+    {
+      "pid": 15381,
+      "before": "LATER",
+      "after": "稍后"
+    },
+    {
+      "pid": 15388,
+      "before": "Congratulations!!\nYou have unlocked level 5, now you can play in online mode as well as invite friends to join it.",
+      "after": "恭喜！\n你已经解锁了5级，现在你可以在线模式玩，也可以邀请朋友加入。"
+    },
+    {
+      "pid": 15389,
+      "before": "OK",
+      "after": "好"
+    },
+    {
+      "pid": 15392,
+      "before": "Congratulations!!\nYou have unlocked level 3, now you can enjoy playing with team in offline mode.",
+      "after": "恭喜！\n你已经解锁了3级，现在你可以在离线模式下与团队一起玩。"
+    },
+    {
+      "pid": 15400,
+      "before": "Your teammates are still alive! There is still hope.",
+      "after": "你的队友还活着！还有希望。"
+    },
+    {
+      "pid": 15404,
+      "before": "SPECTATE",
+      "after": "旁观"
+    },
+    {
+      "pid": 15413,
+      "before": "Lobby",
+      "after": "前厅"
+    },
+    {
+      "pid": 15414,
+      "before": "You have chance to rebirth.\nStill hope to be #1.\nRespawn Now.",
+      "after": "你还有重生机会！\n重返战场，争夺第一！"
+    },
+    {
+      "pid": 15421,
+      "before": "Watch Video Ad &",
+      "after": "直接领取奖励"
+    },
+    {
+      "pid": 15427,
+      "before": "EXIT",
+      "after": "出口"
+    },
+    {
+      "pid": 15435,
+      "before": "Your lives are over.",
+      "after": "你的生活结束了。"
+    },
+    {
+      "pid": 15439,
+      "before": "Respawn",
+      "after": "重生"
+    },
+    {
+      "pid": 15447,
+      "before": "ENABLE",
+      "after": "启用"
+    },
+    {
+      "pid": 15453,
+      "before": "Sensitivity",
+      "after": "灵敏度"
+    },
+    {
+      "pid": 15463,
+      "before": "High Quality",
+      "after": "高质量"
+    },
+    {
+      "pid": 15465,
+      "before": "Graphics",
+      "after": "图像"
+    },
+    {
+      "pid": 15467,
+      "before": "Low Quality",
+      "after": "低质量"
+    },
+    {
+      "pid": 15469,
+      "before": "Rotation Sensitivity",
+      "after": "旋转灵敏度"
+    },
+    {
+      "pid": 15472,
+      "before": "Ui Custumization ",
+      "after": "定制"
+    },
+    {
+      "pid": 15476,
+      "before": "Vehicles",
+      "after": "车辆"
+    },
+    {
+      "pid": 15480,
+      "before": "Magnet Aim",
+      "after": "磁铁目标"
+    },
+    {
+      "pid": 15488,
+      "before": "Forward/Back",
+      "after": "前进/后退"
+    },
+    {
+      "pid": 15495,
+      "before": "Japanese",
+      "after": "日语"
+    },
+    {
+      "pid": 15497,
+      "before": "SETTINGS",
+      "after": "设置"
+    },
+    {
+      "pid": 15506,
+      "before": "Server",
+      "after": "服务器"
+    },
+    {
+      "pid": 15509,
+      "before": "Select Graphics Quality",
+      "after": "选择图形质量"
+    },
+    {
+      "pid": 15514,
+      "before": "Car Sound",
+      "after": "汽车声音"
+    },
+    {
+      "pid": 15520,
+      "before": "Button Controls",
+      "after": "按钮控件"
+    },
+    {
+      "pid": 15530,
+      "before": "Turkish",
+      "after": "土耳其语"
+    },
+    {
+      "pid": 15532,
+      "before": "Portuguese",
+      "after": "葡萄牙语"
+    },
+    {
+      "pid": 15536,
+      "before": "Only Movement joystick UI is enable.",
+      "after": "仅启用移动操纵杆UI。"
+    },
+    {
+      "pid": 15540,
+      "before": "Sound",
+      "after": "声音"
+    },
+    {
+      "pid": 15541,
+      "before": "DISABLE",
+      "after": "禁用"
+    },
+    {
+      "pid": 15545,
+      "before": "German",
+      "after": "德语"
+    },
+    {
+      "pid": 15555,
+      "before": "DISABLE",
+      "after": "禁用"
+    },
+    {
+      "pid": 15557,
+      "before": "Vietnamese",
+      "after": "越南语"
+    },
+    {
+      "pid": 15560,
+      "before": "ENABLE",
+      "after": "启用"
+    },
+    {
+      "pid": 15566,
+      "before": "Split Joystick",
+      "after": "拆分操纵杆"
+    },
+    {
+      "pid": 15572,
+      "before": "ENABLE",
+      "after": "启用"
+    },
+    {
+      "pid": 15591,
+      "before": "Chinese",
+      "after": "中文"
+    },
+    {
+      "pid": 15597,
+      "before": "Korean",
+      "after": "韩语"
+    },
+    {
+      "pid": 15600,
+      "before": "Thai",
+      "after": "泰语"
+    },
+    {
+      "pid": 15601,
+      "before": "Polish",
+      "after": "波兰语"
+    },
+    {
+      "pid": 15602,
+      "before": "Healing Feature",
+      "after": "治疗功能"
+    },
+    {
+      "pid": 15606,
+      "before": "ENABLE",
+      "after": "启用"
+    },
+    {
+      "pid": 15612,
+      "before": "Crosshair Color",
+      "after": "十字线颜色"
+    },
+    {
+      "pid": 15614,
+      "before": "Only Rotation joystick UI is enable.",
+      "after": "仅启用旋转操纵杆UI。"
+    },
+    {
+      "pid": 15618,
+      "before": "DISABLE",
+      "after": "禁用"
+    },
+    {
+      "pid": 15619,
+      "before": "ASIA",
+      "after": "亚洲"
+    },
+    {
+      "pid": 15625,
+      "before": "Arabic",
+      "after": "阿拉伯语"
+    },
+    {
+      "pid": 15626,
+      "before": "Left/Right",
+      "after": "左转/右转"
+    },
+    {
+      "pid": 15627,
+      "before": "ENABLE",
+      "after": "启用"
+    },
+    {
+      "pid": 15630,
+      "before": "Both Rotation and Movement joysticks UI are enable.",
+      "after": "启用旋转和移动操纵杆UI。"
+    },
+    {
+      "pid": 15633,
+      "before": "Basic",
+      "after": "基本"
+    },
+    {
+      "pid": 15637,
+      "before": "Forward/Back",
+      "after": "前进/后退"
+    },
+    {
+      "pid": 15638,
+      "before": "French",
+      "after": "法语"
+    },
+    {
+      "pid": 15639,
+      "before": "English",
+      "after": "英语"
+    },
+    {
+      "pid": 15644,
+      "before": "Left/Right",
+      "after": "左转/右转"
+    },
+    {
+      "pid": 15652,
+      "before": "Pickup",
+      "after": "拾起"
+    },
+    {
+      "pid": 15659,
+      "before": "DISABLE",
+      "after": "禁用"
+    },
+    {
+      "pid": 15661,
+      "before": "LANGUAGES",
+      "after": "语言"
+    },
+    {
+      "pid": 15668,
+      "before": "It adjusts the sensitiveness of the rotation and movement joystick of the gameplay. With increasing value, the controls become more sensitive to the touch. One can adjust it with their convenience.",
+      "after": "它调整游戏玩法的旋转和移动操纵杆的敏感度。随着价值的增加，控件对触摸变得更加敏感。人们可以方便地调整它。"
+    },
+    {
+      "pid": 15671,
+      "before": "DISABLE",
+      "after": "禁用"
+    },
+    {
+      "pid": 15679,
+      "before": "Spanish",
+      "after": "西班牙语"
+    },
+    {
+      "pid": 15683,
+      "before": "If enable, it allows player to automatically collect the items within the gameplay just by going near to it, without any tap. And even one can disable it and be selective about the items they choose to pickup.",
+      "after": "如果启用，它允许玩家自动收集游戏中的项目，只需靠近它，无需任何点击。甚至可以禁用它，并选择他们选择拾取的物品。"
+    },
+    {
+      "pid": 15687,
+      "before": "Controls",
+      "after": "控制"
+    },
+    {
+      "pid": 15690,
+      "before": "Indonesian",
+      "after": "印度尼西亚语"
+    },
+    {
+      "pid": 15691,
+      "before": "ENABLE",
+      "after": "启用"
+    },
+    {
+      "pid": 15697,
+      "before": "Russian",
+      "after": "俄语"
+    },
+    {
+      "pid": 15709,
+      "before": "ENABLE",
+      "after": "启用"
+    },
+    {
+      "pid": 15711,
+      "before": "Audio",
+      "after": "音频"
+    },
+    {
+      "pid": 15721,
+      "before": "Choose Vehicle Controls",
+      "after": "选择车辆控制"
+    },
+    {
+      "pid": 15724,
+      "before": "Display Left Side Fire Button",
+      "after": "显示左侧开火按钮"
+    },
+    {
+      "pid": 15728,
+      "before": "Auto Fire",
+      "after": "自动射击"
+    },
+    {
+      "pid": 15729,
+      "before": "DISABLE",
+      "after": "禁用"
+    },
+    {
+      "pid": 15743,
+      "before": "Both Rotation and Movement joysticks UI are disable.",
+      "after": "旋转和移动操纵杆UI都被禁用。"
+    },
+    {
+      "pid": 15753,
+      "before": "Auto Pickup",
+      "after": "自动拾取"
+    },
+    {
+      "pid": 15758,
+      "before": "Background Music",
+      "after": "背景音乐"
+    },
+    {
+      "pid": 15762,
+      "before": "It lets one adjust, enable and disable the sounds they want in gameplay. Even you can adjust the intensity of background sound in the game.",
+      "after": "它允许人们在游戏中调整，启用和禁用他们想要的声音。即使您可以调整游戏中背景声音的强度。"
+    },
+    {
+      "pid": 15766,
+      "before": "Language",
+      "after": "语言"
+    },
+    {
+      "pid": 15773,
+      "before": "DISABLE",
+      "after": "禁用"
+    },
+    {
+      "pid": 15780,
+      "before": "English",
+      "after": "英语"
+    },
+    {
+      "pid": 15781,
+      "before": "Korean",
+      "after": "韩语"
+    },
+    {
+      "pid": 15782,
+      "before": "Vietnamese",
+      "after": "越南语"
+    },
+    {
+      "pid": 15789,
+      "before": "Chinese (Simplified)",
+      "after": "简体中文"
+    },
+    {
+      "pid": 15793,
+      "before": "Select Language",
+      "after": "选择语言"
+    },
+    {
+      "pid": 15800,
+      "before": "Arabic",
+      "after": "阿拉伯语"
+    },
+    {
+      "pid": 15802,
+      "before": "Russian",
+      "after": "俄语"
+    },
+    {
+      "pid": 15825,
+      "before": "High Quality",
+      "after": "高质量"
+    },
+    {
+      "pid": 15827,
+      "before": "Portuguese",
+      "after": "葡萄牙语"
+    },
+    {
+      "pid": 15831,
+      "before": "Select Graphics Quality",
+      "after": "选择图形质量"
+    },
+    {
+      "pid": 15833,
+      "before": "Spanish",
+      "after": "西班牙语"
+    },
+    {
+      "pid": 15834,
+      "before": "Polish",
+      "after": "波兰语"
+    },
+    {
+      "pid": 15835,
+      "before": "German",
+      "after": "德语"
+    },
+    {
+      "pid": 15846,
+      "before": "Indonesian",
+      "after": "印度尼西亚语"
+    },
+    {
+      "pid": 15847,
+      "before": "Japanese",
+      "after": "日语"
+    },
+    {
+      "pid": 15849,
+      "before": "French",
+      "after": "法语"
+    },
+    {
+      "pid": 15850,
+      "before": "OK",
+      "after": "好"
+    },
+    {
+      "pid": 15862,
+      "before": "OK",
+      "after": "好"
+    },
+    {
+      "pid": 15864,
+      "before": "Low Quality",
+      "after": "低质量"
+    },
+    {
+      "pid": 15865,
+      "before": "Thai",
+      "after": "泰语"
+    },
+    {
+      "pid": 15871,
+      "before": "Turkish",
+      "after": "土耳其语"
+    }
+  ],
+  "remaining_scene_english": [
+    "357 Python",
+    ": KrissVectore",
+    "AKM",
+    "BENELLI M4 H20",
+    "BIZON",
+    "Barrett M82",
+    "Benelli M4 H20",
+    "Beretta PX4",
+    "Brodax",
+    "CLASSIC MODE OF TITAN BLOOD",
+    "DXL-3",
+    "Eagle Heavy",
+    "GAU Minigun",
+    "Glock 18c",
+    "ICS AAR",
+    "IWI X95",
+    "It is a long established fact that a reader will be distracted by the readable content of a page when looking at its layout.",
+    "JEMISH",
+    "JEMISH LAKHANI",
+    "Jemish",
+    "Kills : 2",
+    "Kriss SDP",
+    "LET YOUR SHOOTING MAKES SOUND.",
+    "M134 Airsoft",
+    "M134 Vulcan",
+    "M249 Airsoft",
+    "MCX Patrol",
+    "MPC AR-15",
+    "Mark XIX",
+    "New Text",
+    "Option A",
+    "Pecheneg 79",
+    "Player4638",
+    "ROOM ID : 52525252",
+    "RPG 16",
+    "RRPG 7B",
+    "Ronan Rifle",
+    "SA-H07 Carbine",
+    "SCAR-H",
+    "SVN-98",
+    "Special 357 Python",
+    "Special Barrett M82",
+    "Swordfish A4",
+    "T86 Rifle",
+    "Tavor X95",
+    "Tec KSG",
+    "Tommy Gun",
+    "Xsquads"
+  ],
+  "device_validation": "User confirmed 0.14.38 passed device testing on 2026-10-30; no exhaustive translation certification."
+}

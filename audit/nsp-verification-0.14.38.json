@@ -1,0 +1,19 @@
+{
+  "status": "PASS",
+  "checks": [
+    "three content-addressed NCAs",
+    "AES-XTS headers",
+    "NCA filesystem-header hashes",
+    "PFS0 block hashes",
+    "all six IVFC levels",
+    "NSO decompressed segment hashes",
+    "NPDM title/39-bit/application/memory syscalls",
+    "1865 game files match SHA-256",
+    "16 UTF-8 name/author labels",
+    "16 256x256 JPEG icons",
+    "CNMT content hashes/sizes/version/digest"
+  ],
+  "sha256": "64ff7db43052ea7344fcda1e4e6ae753d9793c5dbd9a4274f606a072c6822311",
+  "hardware_install_launch": "USER_CONFIRMED_PASS_2026-10-30",
+  "hardware_scope": "User confirmed this version passed device testing after the store price-string fix; no exhaustive gameplay or OS compatibility claim."
+}

@@ -1,0 +1,17 @@
+{
+  "version": "0.14.38",
+  "title": "绝地精英",
+  "author": "Xiao Fan",
+  "title_id": "01AF534741470000",
+  "artifact": "绝地精英 [01AF534741470000][0.14.38].nsp",
+  "bytes": 451974360,
+  "sha256": "64ff7db43052ea7344fcda1e4e6ae753d9793c5dbd9a4274f606a072c6822311",
+  "native_nso": true,
+  "external_nro_required": false,
+  "romfs_bytes": 446441768,
+  "source_nro_sha256": "9d9c72b5aba3d4c0502a3442b0f590ebc62796fcc797bf4b5b318a7ec5cb92ef",
+  "native_nso_sha256": "fc71da6912a682137f0098133f12f0b6699a9009f8c5c9c6df59c7ad53c80065",
+  "verification": "pending independent verify_nsp.py",
+  "device_launch": "pending",
+  "hardware_status": "User confirmed 0.14.38 passed device testing on 2026-10-30; not an exhaustive gameplay/OS certification."
+}

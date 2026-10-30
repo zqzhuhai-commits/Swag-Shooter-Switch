@@ -1,4 +1,5 @@
 #include "native_process.h"
+#include "offline_game.h"
 #include "diagnostics.h"
 #include <switch.h>
 #include <malloc.h>
@@ -134,7 +135,7 @@ int main(int argc, char **argv) {
         if (R_SUCCEEDED(watcher_rc)) watcher_running = 1;
         else threadClose(&batch_watcher);
     }
-    fprintf(log, "SWAG-NX v0.14.34 lazy-memory; applet=%u own-process=%x\n",
+    fprintf(log, "SWAG-NX v0.14.38 lazy-memory; applet=%u own-process=%x\n",
             (unsigned)appletGetAppletType(), runtime_process_handle());
     runtime_services_init(log); guest_memory_set_log(log); startup_log(log); android_graphics_set_log(log);
     guest_system_set_log(log); unity_host_set_log(log);
@@ -193,6 +194,7 @@ int main(int argc, char **argv) {
     for (size_t i = 0; i < set.count; ++i) {
         int linked = elf_relocate(&set.modules[i], resolve_module, &set, log) == 0;
         int patched = android_tls_apply(&set.modules[i], memory[i].size, &plans[i], log) == 0;
+        if (i==1 && linked && patched && offline_game_apply(&set.modules[i],log)) patched=0;
         if (!patched) { fprintf(log, "TLS_GAME_PATCH_FAIL %s\n", names[i]); failed = 1; }
         fprintf(log, "%s link=%s JNI_OnLoad=%p\n", names[i], linked ? "OK" : "BLOCKED",
                 (void *)elf_export(&set.modules[i], "JNI_OnLoad"));

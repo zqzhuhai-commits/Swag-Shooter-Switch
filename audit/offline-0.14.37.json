@@ -1,0 +1,154 @@
+{
+  "version": "0.14.37",
+  "game_sha256": "e335cfe1400c35c61912e133a388664a0c34e413b7d852d5d4122459f267aa95",
+  "instruction_guards": 15,
+  "branch_targets": {
+    "0x17729a8": "0x17729e0",
+    "0x1772928": "0x17725e8",
+    "0x1772938": "0x17724a8"
+  },
+  "reward_callers": [
+    {
+      "class": "hms.countryWar2.NotEnoughCashPopup",
+      "method": "WatchVideoToGetFreeCash",
+      "call": "0x16bba9c"
+    },
+    {
+      "class": "hms.countryWar2.NotEnoughDiamondPopup",
+      "method": "WatchVideoGetFreeDiamond",
+      "call": "0x16bc34c"
+    },
+    {
+      "class": "hms.countryWar2.NotEnoughGoldPopup",
+      "method": "WatchVideoToGetFreeGold",
+      "call": "0x16bd828"
+    },
+    {
+      "class": "hms.countryWar2.PaidGunsPanel",
+      "method": "WatchVideoAdsNSeenGunButtonClicked",
+      "call": "0x16c3b94"
+    },
+    {
+      "class": "hms.countryWar2.PowerPackTimer",
+      "method": "OnPowerPackActivated",
+      "call": "0x16c7ce4"
+    },
+    {
+      "class": "hms.countryWar2.RewardClaimPopup",
+      "method": "ClaimButtonClicked",
+      "call": "0x16cd2f0"
+    },
+    {
+      "class": "hms.countryWar2.ScoreboardScreen",
+      "method": "OnX2ClaimButtonClicked",
+      "call": "0x16d1f88"
+    },
+    {
+      "class": "hms.countryWar2.LevelCompletePanel",
+      "method": "On2XClaimButtonClicked",
+      "call": "0x173c5fc"
+    },
+    {
+      "class": "hms.countryWar2.LevelupgradePopup",
+      "method": "OnX2BonusButtonClicked",
+      "call": "0x173e440"
+    },
+    {
+      "class": "hms.countryWar2.MainMenuManager",
+      "method": "OnFreeCashButtonClicked",
+      "call": "0x1741d1c"
+    },
+    {
+      "class": "hms.countryWar2.MainMenuManager",
+      "method": "OnFreeGoldButtonClicked",
+      "call": "0x1741df0"
+    },
+    {
+      "class": "hms.countryWar2.MainMenuManager",
+      "method": "OnFreeDiamondButtonClicked",
+      "call": "0x1741ec4"
+    },
+    {
+      "class": "hms.countryWar2.MainMenuManager",
+      "method": "OnGet2FreeEnemyDetector",
+      "call": "0x1747ea0"
+    },
+    {
+      "class": "hms.countryWar2.CashPanel",
+      "method": "WatchVideoToGetFreeCash",
+      "call": "0x1772f1c"
+    },
+    {
+      "class": "hms.countryWar2.ClaimDiamondOfferPopup",
+      "method": "WatchVideoGetFreeDiamond",
+      "call": "0x1774194"
+    },
+    {
+      "class": "hms.countryWar2.CratePanel",
+      "method": "OnClaimWatchCrate",
+      "call": "0x177b680"
+    },
+    {
+      "class": "hms.countryWar2.DiamondPanel",
+      "method": "WatchVideoGetFreeDiamond",
+      "call": "0x1780044"
+    },
+    {
+      "class": "hms.countryWar2.DidNotClaimBonusPopup",
+      "method": "OnX2ClaimButtonClicked",
+      "call": "0x178095c"
+    },
+    {
+      "class": "hms.countryWar2.EnemyDetectorPanel",
+      "method": "WatchVideoToGetEnemyDetector",
+      "call": "0x1781418"
+    },
+    {
+      "class": "hms.countryWar2.ExpBoosterTimer",
+      "method": "ActivatedButtonClicked",
+      "call": "0x17836b4"
+    },
+    {
+      "class": "hms.countryWar2.GoldPanel",
+      "method": "WatchVideoToGetFreeGold",
+      "call": "0x178a264"
+    },
+    {
+      "class": "hms.countryWar2.GunSelectScripts",
+      "method": "OnSkip10MinuteButtonPressed",
+      "call": "0x178e654"
+    },
+    {
+      "class": "hms.countryWar2.GunSelectScripts",
+      "method": "OnFreeButtonClicked",
+      "call": "0x178f398"
+    },
+    {
+      "class": "hms.countryWar2.GunSelectScripts",
+      "method": "WatchVideoAdsNSeenGunButtonClicked",
+      "call": "0x179028c"
+    },
+    {
+      "class": "hms.countryWar2.InAppPurchaseUI",
+      "method": "WatchVideoToGetFreeGold",
+      "call": "0x1792278"
+    },
+    {
+      "class": "hms.countryWar2.InAppPurchaseUI",
+      "method": "WatchVideoGetFreeDiamond",
+      "call": "0x1792470"
+    },
+    {
+      "class": "hms.countryWar2.InAppPurchaseUI",
+      "method": "WatchVideoToGetFreeCash",
+      "call": "0x1792668"
+    },
+    {
+      "class": "hms.countryWar2.VideoNotAvailablePopup",
+      "method": "OnRetryButtonClicked",
+      "call": "0x19922d8"
+    }
+  ],
+  "wrapper_stack_pair": "objdump verified",
+  "validation": "static code and guards only; device pending"
+}

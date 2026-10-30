@@ -3,6 +3,7 @@
 #include <string.h>
 #include "vehicle_state.h"
 #include "controller_touch.h"
+#include "offline_game.h"
 /* Read only metadata-backed fields on the Unity main thread. Never retain
  * managed object pointers across frames and never invoke gameplay methods. */
 typedef struct {
@@ -21,11 +22,53 @@ typedef struct {
  void (*value)(void *,void *,void *);
  void *(*object_class)(void *);
  unsigned char (*assignable)(void *,void *);
+ const void *(*method)(void *,const char *,int);
+ void *(*invoke)(const void *,void *,void **,void **);
+ const void *(*return_type)(const void *);
+ const void *(*parameter)(const void *,unsigned);
 } StateApi;
 static StateApi api;
 static void *classes[3],*fields[4];
 static int available,bound,disabled,last_report=-2;
 static u64 next_poll;
+static int balances_initialized;
+static const void *game_image;
+static void seed_balances(const void *image,FILE *log) {
+ if(balances_initialized || !api.method || !api.invoke || !api.return_type || !api.parameter) return;
+ void *manager=api.klass(image,"hms.countryWar2","DataManager");
+ void *game=api.klass(image,"hms.countryWar2","GameData");
+ void *menu=api.klass(image,"hms.countryWar2","MainMenuManager");
+ if(!manager || !game || !menu) return;
+ void *instance=api.field(manager,"Instance"),*data=api.field(manager,"_gamedata"),*menu_instance=api.field(menu,"Instance");
+ if(!instance || !data || !menu_instance || !(api.field_flags(instance)&0x10) || !(api.field_flags(menu_instance)&0x10) || (api.field_flags(data)&0x10) || api.type_kind(api.field_type(data))!=0x12) return;
+ void *menu_object=NULL,*object=NULL,*game_object=NULL;
+ api.static_value(menu_instance,&menu_object);api.static_value(instance,&object);
+ if(!menu_object || !object || !api.assignable(manager,api.object_class(object))) return;
+ void *loading=api.field(manager,"loadingDataFronDisk");
+ if(loading && api.type_kind(api.field_type(loading))==2) {
+  unsigned char busy[sizeof(void *)]={1};api.value(object,loading,busy);if(busy[0]) return;
+ }
+ api.value(object,data,&game_object);
+ if(!game_object || !api.assignable(game,api.object_class(game_object))) return;
+ const char *names[]={"set_Cash","set_Gold","set_Diamond"};
+ const void *setters[3];
+ for(unsigned i=0;i<3;++i) {
+  setters[i]=api.method(game,names[i],1);
+  if(!setters[i] || api.type_kind(api.return_type(setters[i]))!=1 || api.type_kind(api.parameter(setters[i],0))!=8) return;
+ }
+ /* User-selected balance. Seed once per launch, never every frame. */
+ int balance=10000000;void *arguments[]={&balance};
+ balances_initialized=1;
+ for(unsigned i=0;i<3;++i) {
+  void *exception=NULL;api.invoke(setters[i],game_object,arguments,&exception);
+  if(exception) { fprintf(log,"DEFAULT_BALANCES status=FAILED setter=%s\n",names[i]);return; }
+ }
+ const void *save=api.method(manager,"SaveGameData",1);
+ void *exception=NULL;
+ unsigned char compulsory=1;void *save_arguments[]={&compulsory};
+ if(save && api.type_kind(api.return_type(save))==1 && api.type_kind(api.parameter(save,0))==2) api.invoke(save,object,save_arguments,&exception);
+ fprintf(log,"DEFAULT_BALANCES cash=%d gold=%d diamond=%d once_per_launch=1 save_exception=%d\n",balance,balance,balance,exception!=NULL);
+}
 void vehicle_state_bind(AndroidElf *module) {
  #define API(member,symbol) api.member=(void *)elf_export(module,symbol)
  API(thread_current,"il2cpp_thread_current"); API(thread_attach,"il2cpp_thread_attach");
@@ -36,6 +79,9 @@ void vehicle_state_bind(AndroidElf *module) {
  API(type_kind,"il2cpp_type_get_type"); API(static_value,"il2cpp_field_static_get_value");
  API(value,"il2cpp_field_get_value"); API(object_class,"il2cpp_object_get_class");
  API(assignable,"il2cpp_class_is_assignable_from");
+ API(method,"il2cpp_class_get_method_from_name");API(invoke,"il2cpp_runtime_invoke");
+ API(return_type,"il2cpp_method_get_return_type");
+ API(parameter,"il2cpp_method_get_param");
  #undef API
  available=api.thread_current && api.thread_attach && api.domain_get && api.assemblies && api.image && api.image_name && api.klass && api.field && api.field_flags && api.field_type && api.type_kind && api.static_value && api.value && api.object_class && api.assignable;
 }
@@ -70,6 +116,7 @@ static int bind_fields(FILE *log) {
   if(name && !strcmp(name,"Assembly-CSharp.dll")) { image=candidate; break; }
  }
  if(!image) return 0;
+ game_image=image;
  const char *names[]={"GameManager","PlayerManager","PlayerCarInteractionHandler"};
  for(unsigned i=0;i<3;++i) {
   classes[i]=api.klass(image,"brijesh.CountryWar2",names[i]);
@@ -101,6 +148,8 @@ void vehicle_state_poll(FILE *log) {
   controller_touch_set_vehicle_state(-1,log); return;
  }
  if(!bound && !bind_fields(log)) return;
+ if(game_image) seed_balances(game_image,log);
+ offline_shop_poll(log);
  int state=read_chain();
  if(state!=last_report) { fprintf(log,"VEHICLE_AUTO_STATE state=%s source=local_player.drivingCar\n",state<0 ? "UNKNOWN" : state ? "DRIVING" : "FOOT_OR_NO_PLAYER"); fflush(log); last_report=state; }
  controller_touch_set_vehicle_state(state,log);
