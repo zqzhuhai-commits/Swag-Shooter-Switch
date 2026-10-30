@@ -4,7 +4,16 @@ from pathlib import Path
 import struct,json,re
 root=(Path(__file__).resolve().parents[1]/'romfs/game')
 fix={
+ 'Server':'游戏难度','SERVER':'游戏难度','Magnet Aim':'辅助瞄准',
+ 'EXIT':'退出','Exit':'退出','exit':'退出',
+ 'All vs All':'单人','ALL VS ALL':'单人','Team':'组队','TEAM':'组队','SwagShooter':'绝地精英','SWAG SHOOTER':'绝地精英',
+ 'OK':'确定','Yes':'确认','CLOSE':'关闭','CONNECT':'连接','Connect':'连接',
+ 'Collected':'已领取','Disabled':'已禁用','EARN':'获取','Finish':'完成',
+ 'PLAY':'开始游戏','Play':'开始游戏','Watch':'查看',
+ 'FEMALE':'女性','MALE':'男性','Kill':'击杀','RANK':'排名','VERSION':'版本',
+ 'WINS':'胜场','Wins':'胜场',
  'CHARACTER':'角色',
+ 'SWAGGER':'绝地精英','Swagger Trophy':'精英奖杯',
  'Class':'类别：','POWER':'威力','CLIP':'弹匣容量','RELOAD':'换弹速度','FIRE RATE':'射速',
  'Watch Video Ad':'直接领取奖励','WATCH A VIDEO':'领取奖励','Watch Ads':'领取奖励',
  'CRATE':'宝箱','Crate':'宝箱',
@@ -63,6 +72,7 @@ out=root/'font-assets'/name;out.write_bytes(rebuild(b,objs,head,{obj['pid']:raw}
 _,_,_,check,_=parse(out);assert len(check)==574
 assert all(t['chinese']==fix[t['key']] for t in check if t['key'] in fix)
 mapping.update({
+ 'SwagShooter':'绝地精英','Swag Shooter':'绝地精英','SWAGSHOOTER':'绝地精英',
  'CASH':'现金','GOLD':'金币','DIAMOND':'钻石','Cash & Gold':'现金和金币','ARMORY':'军械库','GUNS':'武器',
  'GET FREE CASH':'领取免费现金','GET FREE GOLD':'领取免费金币','GET FREE DIAMONDS':'领取免费钻石',
  'Power Pack':'强化礼包','Propack':'强化礼包','EXP BOOSTER IS DISABLED':'经验加成未启用','EXP Booster':'经验加成','EXP Booster Pack':'经验加成礼包',
@@ -104,6 +114,7 @@ for o in objs:
  try:text=raw[132:132+n].decode()
  except UnicodeError:continue
  translated=label_translation(text)
+ if o['pid']==11890:translated='退出游戏'
  # Inspected store purchase/price labels only, not category tabs. The offline
  # product handler grants these items locally, so no remote prices are shown.
  if o['pid'] in {10883,12048,12310,13225,13382,13768,14244}:
@@ -112,8 +123,11 @@ for o in objs:
  if translated and translated!=text:
   changes[o['pid']]=raw[:128]+enc(translated);labels.append({'pid':o['pid'],'before':text,'after':translated})
  elif re.search('[A-Za-z]{3}',text):unknown.add(text)
+# This popup button has a dedicated localizer; prevent it restoring Settings.
+localizer=next(o for o in objs if o['pid']==11889)
+local_raw=bytearray(b[localizer['offset']:localizer['offset']+localizer['size']]);local_raw[12]=0;changes[11889]=bytes(local_raw)
 (root/'font-assets/level1').write_bytes(rebuild(b,objs,head,changes))
 _,newobjs,_=asset(root/'font-assets/level1');assert len(newobjs)==len(objs)
 report={'terms_revised':revised,'fixed_scene_labels':labels,'remaining_scene_english':sorted(unknown),'device_validation':'pending'}
-(root.parents[1]/'audit/chinese-0.14.38.json').write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding='utf-8')
+(root.parents[1]/'audit/chinese-0.14.51.json').write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding='utf-8')
 print('PASS',len(revised),'translation corrections;',len(labels),'fixed scene labels; remaining English:',len(unknown))

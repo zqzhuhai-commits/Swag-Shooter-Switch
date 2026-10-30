@@ -1,18 +1,18 @@
 # 绝地精英 — Switch 移植
 
-名称：绝地精英；作者：Xiao Fan。当前正式版本 **0.14.38**，运行于Atmosphère。用户于2026年10月30日确认此版本实机测试通过。
+名称：绝地精英；作者：Xiao Fan。当前正式版本 **0.14.51**，运行于Atmosphère。用户于2026年10月30日要求正式发布；52人组队实机验证尚未记录。
 
-使用与实机测试相同的NSP发布。包含原生启动修复、离线商店、本地购买发放、激励奖励直接领取及按钮动态价格文字修复。现金、金币、钻石每次启动进入菜单后各补为10,000,000，之后正常记录消费/奖励。修正85条中文词条及732处场景固定文字。
+使用现有0.14.51安装包发布，未重新编译。包含原生启动修复、离线商店、本地购买发放、激励奖励直接领取及按钮动态价格文字修复。现金、金币、钻石每次启动进入菜单后各补为10,000,000，之后正常记录消费/奖励。修正85条中文词条及732处场景固定文字。
 
 ## 单文件NSP
 
-[下载0.14.38](https://github.com/zqzhuhai-commits/Swag-Shooter-Switch/releases/tag/v0.14.38)，解压后安装，覆盖旧版时保留存档。NSP包含原生NSO、完整资源与图标，无需外置NRO。应用ID为`01AF534741470000`，包版本38。存档/缓存仍使用SD `/switch/swag-userdata/`。
+[下载0.14.51](https://github.com/zqzhuhai-commits/Swag-Shooter-Switch/releases/tag/v0.14.51)，解压后安装，覆盖旧版时保留存档。NSP包含原生NSO、完整资源与图标，无需外置NRO。应用ID为`01AF534741470000`，包版本51。存档/缓存仍使用SD `/switch/swag-userdata/`。
 
-详情见[发布说明](RELEASE-0.14.38.md)、[打包说明](packaging/README.md)和[audit/nsp-verification-0.14.38.json](audit/nsp-verification-0.14.38.json)。实机通过不代表所有玩法或系统版本均已穷尽验证。AI难度增强留待后续测试版本。
+详情见[发布说明](RELEASE-0.14.51.md)、[打包说明](packaging/README.md)和[audit/nsp-verification-0.14.51.json](audit/nsp-verification-0.14.51.json)。包含四档AI难度与52人、13支四人小队的经典组队适配；完整编队、敌方各队交战与整局结算仍待实机验证。
 
 ## 构建
 
-自行准备`romfs/game/`原始资源、已有CJK字体替换资源及许可。运行`python tools/build_chinese_assets.py`生成中文覆盖，再运行`./build.ps1`及`python tools/verify_build.py`；生成NSP见打包说明。源码不含游戏资源、用户密钥、设备原始日志或大型安装包；成品通过Release附件提供。当前嵌入文件1865个。
+自行准备`romfs/game/`原始资源、已有CJK字体替换资源及许可。运行`python tools/build_chinese_assets.py`生成中文覆盖，再运行`./build.ps1`及`python tools/verify_build.py`；生成NSP见打包说明。源码不含游戏资源、用户密钥、设备原始日志或大型安装包；成品通过Release附件提供。当前嵌入文件1866个。
 
 ## 按键
 

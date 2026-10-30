@@ -116,7 +116,7 @@ static int map_path(const char *path, int writing, char out[1024]) {
     if (!save && !strcmp(normalized,"assets")) normalized[0]=0;
     if (!save && !strncmp(normalized,"assets/",7)) memmove(normalized,normalized+7,strlen(normalized+7)+1);
     if(!save && !strncmp(normalized,"bin/Data/",9)) {
-        static const char *const fonts[]={"10c8f2a48584d2b4597d211403f44d68","1b2bcabbc518a064492abdee5540a0d7","789bce8c0219262468dba0450de625dd","0370bfcfca7adeb419a60a7d7f57bff3","6d6708753e95e9c4cb1b90615b27ff69","sharedassets0.assets","sharedassets1.assets","2e5f135ec90b47e4e8ca141d7c6c0e9b","level1"};
+        static const char *const fonts[]={"10c8f2a48584d2b4597d211403f44d68","1b2bcabbc518a064492abdee5540a0d7","789bce8c0219262468dba0450de625dd","0370bfcfca7adeb419a60a7d7f57bff3","6d6708753e95e9c4cb1b90615b27ff69","sharedassets0.assets","sharedassets1.assets","2e5f135ec90b47e4e8ca141d7c6c0e9b","level1","level2"};
         const char *name=normalized+9;
         for(unsigned i=0;i<sizeof fonts/sizeof *fonts;++i) {
             size_t length=strlen(fonts[i]);

@@ -1,6 +1,12 @@
 param([string]$DevkitPro = 'C:\devkitPro')
 $ErrorActionPreference = 'Stop'
 $projectDir = $PSScriptRoot
+& python (Join-Path $projectDir 'tools/build_chinese_assets.py')
+if ($LASTEXITCODE) { throw 'Chinese asset build failed.' }
+& python (Join-Path $projectDir 'tools/build_ai_assets.py')
+if ($LASTEXITCODE) { throw 'AI settings asset build failed.' }
+& python (Join-Path $projectDir 'tools/build_gameplay_assets.py')
+if ($LASTEXITCODE) { throw 'Gameplay scene asset build failed.' }
 $compiler = Join-Path $DevkitPro 'devkitA64\bin\aarch64-none-elf-gcc.exe'
 $make = Join-Path $DevkitPro 'msys2\usr\bin\make.exe'
 if (!(Test-Path -LiteralPath $compiler) -or !(Test-Path -LiteralPath $make)) {

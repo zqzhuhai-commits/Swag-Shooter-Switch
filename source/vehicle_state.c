@@ -4,6 +4,7 @@
 #include "vehicle_state.h"
 #include "controller_touch.h"
 #include "offline_game.h"
+#include "ai_profile.h"
 /* Read only metadata-backed fields on the Unity main thread. Never retain
  * managed object pointers across frames and never invoke gameplay methods. */
 typedef struct {
@@ -50,6 +51,8 @@ static void seed_balances(const void *image,FILE *log) {
  }
  api.value(object,data,&game_object);
  if(!game_object || !api.assignable(game,api.object_class(game_object))) return;
+ FILE *seeded=fopen("sdmc:/switch/swag-userdata/.initial-balances-v1","rb");
+ if(seeded) {fclose(seeded);balances_initialized=1;return;}
  const char *names[]={"set_Cash","set_Gold","set_Diamond"};
  const void *setters[3];
  for(unsigned i=0;i<3;++i) {
@@ -58,7 +61,6 @@ static void seed_balances(const void *image,FILE *log) {
  }
  /* User-selected balance. Seed once per launch, never every frame. */
  int balance=10000000;void *arguments[]={&balance};
- balances_initialized=1;
  for(unsigned i=0;i<3;++i) {
   void *exception=NULL;api.invoke(setters[i],game_object,arguments,&exception);
   if(exception) { fprintf(log,"DEFAULT_BALANCES status=FAILED setter=%s\n",names[i]);return; }
@@ -67,6 +69,10 @@ static void seed_balances(const void *image,FILE *log) {
  void *exception=NULL;
  unsigned char compulsory=1;void *save_arguments[]={&compulsory};
  if(save && api.type_kind(api.return_type(save))==1 && api.type_kind(api.parameter(save,0))==2) api.invoke(save,object,save_arguments,&exception);
+ if(exception)return;
+ seeded=fopen("sdmc:/switch/swag-userdata/.initial-balances-v1","wb");
+ if(seeded) {fputs("initial grant 10000000\n",seeded);fclose(seeded);}
+ balances_initialized=1;
  fprintf(log,"DEFAULT_BALANCES cash=%d gold=%d diamond=%d once_per_launch=1 save_exception=%d\n",balance,balance,balance,exception!=NULL);
 }
 void vehicle_state_bind(AndroidElf *module) {
@@ -149,7 +155,9 @@ void vehicle_state_poll(FILE *log) {
  }
  if(!bound && !bind_fields(log)) return;
  if(game_image) seed_balances(game_image,log);
+ if(game_image) ai_profile_menu(game_image);
  offline_shop_poll(log);
+ ai_profile_poll();
  int state=read_chain();
  if(state!=last_report) { fprintf(log,"VEHICLE_AUTO_STATE state=%s source=local_player.drivingCar\n",state<0 ? "UNKNOWN" : state ? "DRIVING" : "FOOT_OR_NO_PLAYER"); fflush(log); last_report=state; }
  controller_touch_set_vehicle_state(state,log);

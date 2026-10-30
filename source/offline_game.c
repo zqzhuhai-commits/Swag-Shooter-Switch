@@ -20,6 +20,10 @@ static uint32_t (*shop_keep_string)(void *,unsigned char);
 static void (*shop_write_reference)(void *,void **,void *);
 static void *shop_price;
 static uint32_t shop_price_handle;
+static void *persistent_path(void *method) {
+ (void)method;
+ return shop_string_new("/sdcard");
+}
 static const size_t product_fields[]={24,32,40,56,48};
 static void *shop_owner(void) {
  if(!purchase_class_slot || !*purchase_class_slot) return NULL;
@@ -88,6 +92,18 @@ static void local_purchase(void *owner,void *id,void *method) {
  purchase_busy=0;
 }
 static const Patch patches[]={
+ /* Android settings/retry actions exit cleanly on Switch. */
+ {0x170a7cc,0xf81e0ff3,B(0x170a7cc,0x170a884)},
+ {0x170a828,0xf81e0ff3,B(0x170a828,0x170a884)},
+ /* Remove level gates in both UI and click handlers; preserve Photon connectivity checks. */
+ {0x1986208,0x540000aa,0x14000005},
+ {0x19863a8,0x540000aa,0xd503201f},
+ {0x1985dfc,0x1a9fd7e1,0x52800021},
+ {0x1985e38,0x1a9fd7e1,0x52800001},
+ {0x1985e88,0x1a9fa7e1,0x52800001},
+ {0x1985ed8,0x1a9fa7e1,0x52800021},
+ {0x1985f28,0x1a9fd7e1,0x52800021},
+ {0x1985f78,0x1a9fd7e1,0x52800001},
  /* Local labels are authoritative; remote localized prices are unavailable. */
  {0x1853480,0xd10383ff,0xd65f03c0},
  {0x1854270,0xf81e0ff3,0xd65f03c0},
@@ -140,6 +156,12 @@ int offline_game_apply(AndroidElf *module,FILE *log) {
  shop_keep_string=(void *)elf_export(module,"il2cpp_gchandle_new");
  shop_write_reference=(void *)elf_export(module,"il2cpp_gc_wbarrier_set_field");
  if(!shop_string_new || !shop_keep_string || !shop_write_reference) goto reject;
+ const uint32_t path_words[]={0xf81e0ff3,0xa9017bfd,0x910043fd,0xd000cc73};
+ for(unsigned i=0;i<2;++i) {
+  size_t address=i ? 0x11a5da0 : 0x11a5d6c;
+  uintptr_t method=0;memcpy(&method,module->image+0x2b072a8+(0x7a+i-1)*8,8);
+  if(method!=module->bias+address || memcmp(module->image+address,path_words,16))goto reject;
+ }
  purchase_class_slot=(void **)class_slot;
  purchase_log=log;
  for(unsigned i=0;i<sizeof patches/sizeof patches[0];++i) {
@@ -153,6 +175,10 @@ int offline_game_apply(AndroidElf *module,FILE *log) {
  /* ldr x16, PC+8; br x16; absolute native callback address. */
  const uint32_t jump[]={0x58000050,0xd61f0200};uintptr_t target=(uintptr_t)local_purchase;
  memcpy(module->image+0x1853308,jump,8);memcpy(module->image+0x1853310,&target,8);
+ target=(uintptr_t)persistent_path;
+ memcpy(module->image+0x11a5d6c,jump,8);memcpy(module->image+0x11a5d74,&target,8);
+ memcpy(module->image+0x11a5da0,jump,8);memcpy(module->image+0x11a5da8,&target,8);
+ fprintf(log,"UNITY_SAVE_PATH persistent=/sdcard cache=/sdcard mapped=swag-userdata\n");
  fprintf(log,"OFFLINE_GAME_PATCH shops=2 reward_overloads=3 original_success_callbacks=1 status=APPLIED\n");
  return 0;
 reject:

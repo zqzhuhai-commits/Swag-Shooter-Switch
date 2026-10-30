@@ -1,0 +1,19 @@
+{
+  "status": "PASS",
+  "compiled_arm64_fixture": true,
+  "instructions_executed": 6637342,
+  "human_arrival_orders": 52,
+  "players": 52,
+  "squads": 13,
+  "members_per_squad": 4,
+  "checks": [
+    "roster capacity",
+    "human first/last/every intermediate arrival",
+    "duplicate death ignored",
+    "whole-squad elimination ranks",
+    "last surviving squad wins",
+    "round reset",
+    "production managed-array builder: 13 independent enemy lists and allied lists"
+  ],
+  "unity_integration": "DEVICE_TEST_PENDING"
+}
