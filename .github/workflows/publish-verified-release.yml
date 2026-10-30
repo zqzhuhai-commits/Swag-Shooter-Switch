@@ -1,0 +1,22 @@
+name: Publish verified 0.14.38
+on:
+  push:
+    branches: [main]
+    paths: [.github/releases/v0.14.38.json]
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: verified-release-0.14.38
+  cancel-in-progress: false
+jobs:
+  publish:
+    if: github.repository == 'zqzhuhai-commits/Swag-Shooter-Switch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify tested package and publish attachments
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 tools/publish_verified_release.py .github/releases/v0.14.38.json
+
