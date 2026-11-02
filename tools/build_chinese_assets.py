@@ -69,6 +69,8 @@ b,objs,head,terms,end=parse(root/'bin/Data'/name)
 obj=objs[0];raw=b[obj['offset']:obj['offset']+obj['size']];edits=[];mapping={};revised=[]
 for t in terms:
  zh=fix.get(t['key'],t['chinese'])
+ if re.search(r'swag\s*shooter',t['key'],re.I) or re.search(r'swag\s*shooter',t['english'],re.I):
+  zh=re.sub(r'swag\s*shooter','绝地精英',zh or t['english'],flags=re.I)
  zh=zh.replace('限制游戏区域','缩小游戏区域').replace('限制游戏区','缩小游戏区') if zh else zh
  if zh:
   mapping[t['english']]=zh;mapping[t['key']]=zh
@@ -101,6 +103,7 @@ mapping.update({
  'Turkish':'土耳其语','Russian':'俄语','Arabic':'阿拉伯语','Japanese':'日语','Korean':'韩语','Indonesian':'印度尼西亚语','Vietnamese':'越南语',
 })
 def label_translation(text):
+ if re.search(r"swag\s*shooter",text,re.I):return re.sub(r"swag\s*shooter","绝地精英",text,flags=re.I)
  if '限制游戏区域' in text or '限制游戏区' in text:
   return text.replace('限制游戏区域','缩小游戏区域').replace('限制游戏区','缩小游戏区')
  if text in mapping:return mapping[text]
@@ -138,8 +141,26 @@ for o in objs:
 # This popup button has a dedicated localizer; prevent it restoring Settings.
 localizer=next(o for o in objs if o['pid']==11889)
 local_raw=bytearray(b[localizer['offset']:localizer['offset']+localizer['size']]);local_raw[12]=0;changes[11889]=bytes(local_raw)
+# PurchasedBannerAds/Close Button: serialized alpha was 1/255, so the
+# existing working close action was effectively invisible on the white panel.
+close=next(o for o in objs if o['pid']==12857)
+close_raw=bytearray(b[close['offset']:close['offset']+close['size']])
+assert struct.unpack_from('<iq',close_raw,16)==(1,2322)
+assert abs(struct.unpack_from('<f',close_raw,56)[0]-1/255)<0.00001
+struct.pack_into('<4f',close_raw,44,0.45,0.45,0.45,1.0)
+changes[12857]=bytes(close_raw)
+button=next(o for o in objs if o['pid']==12856)
+assert b'OnCloseButtonClicked' in b[button['offset']:button['offset']+button['size']]
+# Disabled startup promotion: keep original shop/reward panels untouched.
+promotion=next(o for o in objs if o['pid']==12157)
+promotion_raw=bytearray(b[promotion['offset']:promotion['offset']+promotion['size']])
+assert struct.unpack_from('<q',promotion_raw,4)[0]==998
+promotion_raw[12]=0;changes[12157]=bytes(promotion_raw)
+promotion_go=next(o for o in objs if o['pid']==998)
+promotion_go_raw=bytearray(b[promotion_go['offset']:promotion_go['offset']+promotion_go['size']])
+promotion_go_raw[-1]=0;changes[998]=bytes(promotion_go_raw)
 (root/'font-assets/level1').write_bytes(rebuild(b,objs,head,changes))
 _,newobjs,_=asset(root/'font-assets/level1');assert len(newobjs)==len(objs)
 report={'terms_revised':revised,'fixed_scene_labels':labels,'remaining_scene_english':sorted(unknown),'device_validation':'pending'}
-(root.parents[1]/'audit/chinese-0.14.58.json').write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding='utf-8')
+(root.parents[1]/'audit/chinese-0.14.72.json').write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding='utf-8')
 print('PASS',len(revised),'translation corrections;',len(labels),'fixed scene labels; remaining English:',len(unknown))

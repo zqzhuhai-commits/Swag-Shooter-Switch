@@ -62,4 +62,4 @@ for limit in waits:
    if r not in ['x0','x16','x21','q0']:assert regs[r]==v,(r,hex(regs[r]),hex(v))
   cases+=1
 report={'status':'PASS','bridge_register_stack_datetime_and_float_cases':cases,'wait_seconds':waits,'shrink_seconds':shrinks,'six_phase_total_seconds':900,'hardware_validation':'PENDING'}
-(root/'audit/progressive-zone-0.14.58.json').write_text(json.dumps(report,indent=2));print(report)
+(root/'audit/progressive-zone-0.14.72.json').write_text(json.dumps(report,indent=2));print(report)

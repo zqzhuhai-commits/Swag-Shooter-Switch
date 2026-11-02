@@ -1,0 +1,14 @@
+{
+  "status": "PASS",
+  "file": "sharedassets2.assets",
+  "texture": 189,
+  "dimensions": [
+    1024,
+    1024
+  ],
+  "format": 34,
+  "all_other_serialized_objects_unchanged": true,
+  "sha256": "b7e285b300e0a753a0cfacccfe58dbb6e41527c3348fc65c6fec12f4e3c0db1b",
+  "artwork_method": "built-in image_gen text localization",
+  "map_overlay_alignment_device_validation": "PENDING"
+}

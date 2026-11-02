@@ -34,5 +34,5 @@ for required in ['zone_distance_squared(point,zone_ai.center)>r*r*0.81f',
  assert required in s,required
 report={'status':'PASS','binary_entry_guards':3,'native_navmesh_api_name':True,
         'geometry_expression_model_cases':5000,'compiled_hook_and_unity_navigation':'DEVICE_TEST_PENDING'}
-(r/'audit/ai-zone-navigation-0.14.58.json').write_text(json.dumps(report,indent=2))
+(r/'audit/ai-zone-navigation-0.14.72.json').write_text(json.dumps(report,indent=2))
 print(report)

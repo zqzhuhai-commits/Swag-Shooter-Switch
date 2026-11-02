@@ -25,12 +25,16 @@ for i in range(1001):
  assert .59999<=p<=1.00001
  assert abs(p-(base-amplitude*math.cos((t+1)*angle)))<1e-9
 assert start==.35
+assert 'health_warning_pulse_hz((unsigned)health)' in s
+policy=(r/'include/health_warning_policy.h').read_text()
+assert '#define HEALTH_WARNING_THRESHOLD_PERMILLE 500u' in policy
+assert 'health<300 ? 2 : 1' in policy
 poll=(r/'source/ai_profile.c').read_text(encoding='utf-8')
 for marker in ['playing!=1','value<=0','max<=0','_isAlive','_isLocalPlayer','_health','maxHealth']:
  assert marker in poll
 report={'status':'PASS','gradient_expression_model_samples':1001,'center_alpha':0,
-        'max_alpha':.45,'gradient_start_normalized':start,'pulse_hz':1,'pulse_brightness_range':[.6,1],
+        'max_alpha':.45,'gradient_start_normalized':start,'pulse_hz_below_50_percent':1,'pulse_hz_below_30_percent':2,'pulse_brightness_range':[.6,1],
         'no_step_at_gradient_start':True,'actual_gl_shader_and_device_visual':'PENDING',
-        'health_threshold_and_fade_compiled_test':'see squad-rules-0.14.58.json'}
-(r/'audit/health-warning-0.14.58.json').write_text(json.dumps(report,indent=2))
+        'health_threshold_and_fade_compiled_test':'see squad-rules-0.14.72.json'}
+(r/'audit/health-warning-0.14.72.json').write_text(json.dumps(report,indent=2))
 print(report)

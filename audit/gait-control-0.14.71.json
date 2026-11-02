@@ -1,0 +1,16 @@
+{
+  "status": "PASS",
+  "controller_asset": "523296cd74975db40a111c3a9abe25c6",
+  "base_state": "Base Layer.WalkStates",
+  "base_state_hash": 1294380448,
+  "speed_parameter_hash": 254213878,
+  "speed_parameter_name": "speed",
+  "state_time_parameter": 0,
+  "compiled_cadence_policy_test": "PASS in native ARM64 fixture",
+  "target_cycles_hz": {
+    "walk": 0.75,
+    "run": 1.05
+  },
+  "host_fixture_instructions": 7706090,
+  "hardware_cadence_validation": "PENDING"
+}

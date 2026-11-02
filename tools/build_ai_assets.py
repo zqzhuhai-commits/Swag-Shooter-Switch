@@ -2,7 +2,7 @@
 Run after build_chinese_assets.py. Preserve object IDs and UnityEvent callback.
 """
 from pathlib import Path
-import struct,json
+import struct,json,re
 from read_unity_assets import asset
 
 root=Path(__file__).resolve().parents[1]
@@ -57,6 +57,7 @@ for obj in objects:
   if size<4 or size>100 or offset+4+size>len(data):continue
   try:text=data[offset+4:offset+4+size].decode()
   except UnicodeError:continue
+  if re.fullmatch(r'swag\s*shooter',text,re.I):mode_words[text]='绝地精英'
   if text in mode_words:replacements.append((offset,offset+4+((size+3)&~3),string(mode_words[text])));mode_edits.append(text)
  for start,end,replacement in sorted(replacements,reverse=True):data=data[:start]+replacement+data[end:]
  if replacements:changed[obj['pid']]=data
@@ -88,7 +89,7 @@ new_by_id={o['pid']:new[o['offset']:o['offset']+o['size']] for o in parsed}
 assert struct.unpack_from('<I',new_by_id[11000],372)[0]==4
 assert struct.unpack_from('<I',new_by_id[15609],372)[0]==4
 assert new_by_id[15609][372+len(option_data):]==dropdown[440:]
-report={'version':'0.14.58','mode_source_translations':mode_edits,'settings_dropdown':15609,'label':15506,'options':options,'default':'普通AI',
+report={'version':'0.14.72','mode_source_translations':mode_edits,'settings_dropdown':15609,'label':15506,'options':options,'default':'普通AI',
         'changed_objects':list(changed),'disabled_old_localizers':disabled,'device_validation':'pending'}
-(root/'audit/ai-settings-0.14.58.json').write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding='utf-8')
+(root/'audit/ai-settings-0.14.72.json').write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding='utf-8')
 print('PASS AI difficulty settings: four options, original event preserved, unrelated selector unchanged')

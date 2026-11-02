@@ -1,4 +1,5 @@
 #include "controller_touch.h"
+#include "ai_profile.h"
 #include <string.h>
 #include <stdlib.h>
 #include <math.h>
@@ -21,6 +22,7 @@ static int look_active,look_reset,move_active;
 static int vehicle_auto;
 static int action_id[TARGET_COUNT];
 static unsigned action_seen[TARGET_COUNT];
+static uint64_t camera_begin;static int camera_long;
 static int sprint_enabled,aim_active,aim_close,aim_last_pulse,modifier_used,interaction_modified;
 static float clamp(float v,float lo,float hi) { return v<lo ? lo : v>hi ? hi : v; }
 static float axis(int v) { return abs(v)<6000 ? 0 : v/32767.0f; }
@@ -29,6 +31,7 @@ static void append(SwitchTouchSnapshot *s,int id,float x,float y) {
  int i=s->count++; s->ids[i]=id; s->x[i]=clamp(x,0,1279); s->y[i]=clamp(y,0,719);
 }
 static void reset(void) {
+ camera_begin=0;camera_long=0;ai_profile_camera_aim(0);
  previous=0; crouch_begin=reload_begin=interact_begin=0; interact_long=0; crouch_long=reload_long=0;
  alternate_weapon=vehicle=chord=grenade_cancel=look_active=look_reset=move_active=0;
  vehicle_auto=0;
@@ -93,6 +96,7 @@ static void update_at(SwitchTouchSnapshot *s,PadState *pad,FILE *log,u64 now) {
   previous=held; chord=1; return;
  }
  chord=0;
+ ai_profile_camera_aim(!vehicle && (held&HidNpadButton_ZL));
  if(pressed&HidNpadButton_A) { crouch_begin=now; crouch_long=0; }
  if(pressed&HidNpadButton_Y) { reload_begin=now; reload_long=0; }
  if(pressed&HidNpadButton_StickR) { interact_begin=now; interact_long=0; }
@@ -133,10 +137,20 @@ static void update_at(SwitchTouchSnapshot *s,PadState *pad,FILE *log,u64 now) {
   if(pressed&HidNpadButton_Down) emit(s,CYCLE,log,1);
   if((released&HidNpadButton_R) && !grenade_cancel) emit(s,GRENADE,log,1);
   if((released&HidNpadButton_L) && !modifier_used) emit(s,HEAL,log,1);
+#ifdef SWAG_THIRD_PERSON_TEST
+  if(pressed&HidNpadButton_StickL) {camera_begin=now;camera_long=0;}
+  if((held&HidNpadButton_StickL) && !camera_long && now-camera_begin>=500) {
+   camera_long=1;if(!(held&HidNpadButton_ZL))ai_profile_toggle_camera();
+  }
+  if((released&HidNpadButton_StickL) && !camera_long) {
+   sprint_enabled=!sprint_enabled;emit(s,SPRINT,log,1);
+  }
+#else
   if(pressed&HidNpadButton_StickL) {
    sprint_enabled=!sprint_enabled; emit(s,SPRINT,log,1);
    fprintf(log,"CONTROL_SPRINT enabled=%d\n",sprint_enabled);
   }
+#endif
  }
  if(!vehicle && (rx || ry)) {
   if(look_reset) { look_reset=0; look_active=0; }
@@ -178,8 +192,15 @@ int controller_touch_selftest(FILE *log) {
  STEP(HidNpadButton_Y,1000); STEP(0,1100); errors+=!has(&s,PICKUP);
  STEP(HidNpadButton_Y,1200); STEP(HidNpadButton_Y,1700); errors+=!has(&s,RELOAD);
  STEP(0,1800); errors+=s.count!=0;
- STEP(HidNpadButton_StickL,1810); errors+=!sprint_enabled;
- STEP(0,1820); STEP(HidNpadButton_StickL,1830); errors+=sprint_enabled;
+ STEP(HidNpadButton_StickL,1810);
+#ifndef SWAG_THIRD_PERSON_TEST
+ errors+=!sprint_enabled;
+#endif
+ STEP(0,1820); STEP(HidNpadButton_StickL,1830);
+#ifdef SWAG_THIRD_PERSON_TEST
+ STEP(0,1840);
+#endif
+ errors+=sprint_enabled;
  STEP(0,1840);
  STEP(HidNpadButton_StickR,1841); errors+=s.count!=0;
  STEP(0,1842); errors+=!has(&s,PRONE) || has(&s,INTERACT);

@@ -1,10 +1,20 @@
 #include "squad_rules.h"
 #include "guest_cpu_policy.h"
 #include "health_warning_policy.h"
+#include "gait_policy.h"
 #include "zone_safety_policy.h"
 void *memset(void *p,int v,size_t n) {unsigned char *d=p;for(size_t i=0;i<n;++i)d[i]=(unsigned char)v;return p;}
 void *memcpy(void *p,const void *q,size_t n) {unsigned char *d=p;const unsigned char *s=q;for(size_t i=0;i<n;++i)d[i]=s[i];return p;}
 int run_squad_rules_tests(void) {
+ if(gait_target_millihz(0)!=450 || gait_target_millihz(1)!=650)return 80;
+ if(gait_adjust_rate(600,6000,750)>=600 || gait_adjust_rate(600,600,750)<=600)return 81;
+ if(gait_adjust_rate(300,450,450)!=300 || gait_adjust_rate(400,650,650)!=400)return 82;
+ if(gait_adjust_rate(550,0,750)!=550 || gait_adjust_rate(550,31000,750)!=550)return 83;
+ if(gait_max_rate(0)!=400 || gait_max_rate(1)!=500)return 85;
+ unsigned gait_rate=400;
+ for(unsigned i=0;i<12;++i)gait_rate=gait_adjust_rate(gait_rate,12000*gait_rate/400,650);
+ if(gait_rate<18 || gait_rate>28)return 84;
+
  int result=squad_rules_selftest();if(result)return result;
  { /* Partial spawning must not create 36 phantom survivors on the HUD. */
   SquadRules s;squad_rules_reset(&s);
@@ -37,7 +47,8 @@ int run_squad_rules_tests(void) {
   if(squad_rules_enemy_lives(&s) || squad_rules_winner(&s)!=1)return 73;
  }
  {
-  if(health_warning_alpha(1000) || health_warning_alpha(300) || health_warning_alpha(0)!=450)return 60;
+  if(health_warning_pulse_hz(299)!=2 || health_warning_pulse_hz(300)!=1 || health_warning_pulse_hz(499)!=1)return 66;
+  if(health_warning_alpha(1000) || health_warning_alpha(500) || health_warning_alpha(0)!=450 || !health_warning_alpha(499))return 60;
   unsigned previous=450;
   for(unsigned hp=0;hp<=1000;++hp) {
    unsigned alpha=health_warning_alpha(hp);if(alpha>previous || alpha>450)return 61;previous=alpha;

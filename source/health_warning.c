@@ -14,7 +14,7 @@ static u64 last_tick;
 static int failed;
 int health_warning_pending(void) {
  int health=__atomic_load_n(&published_health,__ATOMIC_ACQUIRE);
- int pending=opacity || (health>=0 && health<300);
+ int pending=opacity || (health>=0 && (unsigned)health<HEALTH_WARNING_THRESHOLD_PERMILLE);
  if(!pending)last_tick=armGetSystemTick();
  return pending;
 }
@@ -79,8 +79,8 @@ void health_warning_draw(int width,int height) {
  glEnable(GL_BLEND);
  glColorMask(GL_TRUE,GL_TRUE,GL_TRUE,GL_FALSE);
  glBlendEquationSeparate(GL_FUNC_ADD,GL_FUNC_ADD);glBlendFuncSeparate(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA,GL_ZERO,GL_ONE);
- /* Exactly one smooth bright/dim cycle per second, never fully off. */
- float cycle=(float)(now%freq)/(float)freq;
+ /* Smooth bright/dim cycles: 1 Hz below 50%, 2 Hz below 30%. */
+ float cycle=(float)(now%freq)/(float)freq*health_warning_pulse_hz((unsigned)health);
  float pulse=0.80f-0.20f*cosf(cycle*6.28318530718f);
  glUseProgram(program);glBindVertexArray(vao);glUniform1f(strength_uniform,(float)opacity/1000.0f*pulse);
  glDrawArrays(GL_TRIANGLES,0,3);

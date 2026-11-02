@@ -3,3 +3,7 @@
 int ai_profile_prepare(AndroidElf *module,FILE *log);
 void ai_profile_poll(void);
 void ai_profile_menu(const void *image);
+
+void ai_profile_toggle_camera(void);
+
+void ai_profile_camera_aim(int held);

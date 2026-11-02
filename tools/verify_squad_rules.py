@@ -235,11 +235,11 @@ report={'status':'PASS','compiled_arm64_fixture':True,'instructions_executed':st
     'local elimination permits loss without a provisional winner',
     'production finish hooks reject premature callbacks and duplicate settlement',
     'non-classic modes retain original callbacks', 'worker CPU masks exclude system core',
-    'health warning 30-percent threshold, monotonic opacity, smooth fade and upper bound',
+    'health warning 50-percent threshold, 30-percent pulse transition, monotonic opacity, smooth fade and upper bound',
     'zone damage fallback grace and native damage suppression',
     '36-survivor fixture: outside AI health depletion updates squad winner',
     'production actor collector: roster priority, deduplication, expired handles, capacities 1..52',
     'no dictionary indexer invocation in zone code'],
     'unity_integration':'DEVICE_TEST_PENDING'}
-(root/'audit/squad-rules-0.14.58.json').write_text(json.dumps(report,indent=2))
+(root/'audit/squad-rules-0.14.72.json').write_text(json.dumps(report,indent=2))
 print(json.dumps(report))

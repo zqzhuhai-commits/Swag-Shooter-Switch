@@ -18,6 +18,6 @@ target=root/'romfs/game/font-assets/level2';target.write_bytes(out)
 check,parsed,_=asset(target)
 assert len(parsed)==len(objects)
 assert struct.unpack_from('<3f',check,p+156)==(15.0,3.0,90.0)
-report={'version':'0.14.58','scene':'level2','object':31554,'old_interval_seconds':60,'interval_seconds':180,'old_shrink_seconds':10,'shrink_seconds':90,'progressive_wait_seconds':[180,120,90,75,60,45],'progressive_shrink_seconds':[90,75,60,45,30,30],'fallback_percentage_decrement':15,'runtime_shrink_current_percent':[25,35,40,45,50,50],'unrelated_bytes_unchanged':True,'sha256':hashlib.sha256(check).hexdigest(),'device_validation':'PENDING'}
-(root/'audit/gameplay-timing-0.14.58.json').write_text(json.dumps(report,indent=2))
+report={'version':'0.14.72','scene':'level2','object':31554,'old_interval_seconds':60,'interval_seconds':180,'old_shrink_seconds':10,'shrink_seconds':90,'progressive_wait_seconds':[180,120,90,75,60,45],'progressive_shrink_seconds':[90,75,60,45,30,30],'fallback_percentage_decrement':15,'runtime_shrink_current_percent':[25,35,40,45,50,50],'unrelated_bytes_unchanged':True,'sha256':hashlib.sha256(check).hexdigest(),'device_validation':'PENDING'}
+(root/'audit/gameplay-timing-0.14.72.json').write_text(json.dumps(report,indent=2))
 print('PASS scene timing: interval 60 -> 180 seconds; first shrink 10 -> 90 seconds; native hook advances later stages; other scene bytes unchanged')
