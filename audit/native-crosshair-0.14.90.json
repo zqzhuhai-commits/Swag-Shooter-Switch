@@ -1,0 +1,7 @@
+{
+  "version": "0.14.90",
+  "status": "PASS",
+  "native_sprite_and_texture_byte_identical": true,
+  "custom_hooks_removed": true,
+  "sha256": "ed96d8ea549fee1f7beb6500143e3e1c6a666d6e452b96382fc732548e6fa01f"
+}

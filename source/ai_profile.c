@@ -6,6 +6,9 @@
 #include "squad_rules.h"
 #include "health_warning.h"
 #include "gait_policy.h"
+#include "controller_touch.h"
+#include "mouse_axis_policy.h"
+#include "movement_policy.h"
 #include "zone_safety_policy.h"
 typedef struct {
  void *(*klass)(void *);
@@ -36,9 +39,32 @@ typedef struct {
  void *(*class_from_type)(const void *);
  unsigned char (*assignable)(void *,void *);
  void *(*resolve_icall)(const char *);
+ void *(*domain)(void);
+ void **(*assemblies)(void *,size_t *);
+ const void *(*image)(void *);
 } AiApi;
 static AiApi api;
 static FILE *output;
+static float (*original_mouse_axis)(void *,void *),(*original_mouse_raw)(void *,void *);
+static unsigned mouse_look_allowed,mouse_look_active;
+static uint64_t mouse_look_packet,mouse_look_tick;
+void ai_profile_mouse_look(float x,float y,int active) {
+ if(!isfinite(x) || !isfinite(y)) {x=y=0;active=0;}
+ float values[]={x,y};uint64_t packed;memcpy(&packed,values,sizeof packed);
+ __atomic_store_n(&mouse_look_packet,packed,__ATOMIC_RELEASE);
+ __atomic_store_n(&mouse_look_tick,armGetSystemTick(),__ATOMIC_RELEASE);
+ __atomic_store_n(&mouse_look_active,active!=0,__ATOMIC_RELEASE);
+}
+static float mouse_axis_override(void *name,float original) {
+ if(!name || !__atomic_load_n(&mouse_look_allowed,__ATOMIC_ACQUIRE) || !__atomic_load_n(&mouse_look_active,__ATOMIC_ACQUIRE))return original;
+ unsigned axis=mouse_axis_id(api.string_chars(name),api.string_length(name));if(!axis)return original;
+ if(!mouse_axis_fresh(__atomic_load_n(&mouse_look_tick,__ATOMIC_ACQUIRE),armGetSystemTick(),armGetSystemTickFreq()))return original;
+ uint64_t packed=__atomic_load_n(&mouse_look_packet,__ATOMIC_ACQUIRE);float values[2];memcpy(values,&packed,sizeof packed);
+ /* InputManager's serialized Mouse X/Y sensitivity is 0.1 per pixel. */
+ return values[axis-1]*0.1f;
+}
+static float game_mouse_axis(void *name,void *method) {return mouse_axis_override(name,original_mouse_axis(name,method));}
+static float game_mouse_raw(void *name,void *method) {return mouse_axis_override(name,original_mouse_raw(name,method));}
 static int difficulty=1,dirty,updating_ui;
 static unsigned bot_count;
 static void *object_field(void *object,const char *name);
@@ -375,6 +401,7 @@ static void tune_gun(void *object) {
 static void gun_changed(void *object,void *method) {
  original_gun_changed(object,method);tune_gun(object);
 }
+static uint32_t crosshair_ui; /* Optional muzzle UI reference; native reticle is untouched. */
 static void settings_changed(void *object,void *method) {
  (void)method;if(updating_ui)return;
  void *dropdown=object_field(object,"regionSelectDropdown");if(!dropdown)return;
@@ -401,13 +428,94 @@ static unsigned camera_toggle_pending,camera_aim_held;
 void ai_profile_toggle_camera(void) {__atomic_fetch_xor(&camera_toggle_pending,1,__ATOMIC_RELAXED);}
 void ai_profile_camera_aim(int held) {__atomic_store_n(&camera_aim_held,held!=0,__ATOMIC_RELAXED);}
 typedef struct {uint32_t handle;unsigned char enabled;} ShoulderRenderer;
-static ShoulderRenderer shoulder_renderers[96];static unsigned shoulder_renderer_count;
+static ShoulderRenderer shoulder_renderers[256];static unsigned shoulder_renderer_count;
 static uint32_t shoulder_body;static unsigned char shoulder_body_active;
 static ZoneVector shoulder_original_angles;static int shoulder_have_angles;
 static uint32_t shoulder_animation,shoulder_lens,shoulder_ik,shoulder_controller;
 static unsigned char shoulder_ik_enabled;
 static void (*original_third_animation_late)(void *,void *);
 static void (*original_player_update)(void *,void *);
+static void view_visibility_refresh(void);
+static uint32_t view_visibility_owner;
+typedef struct {ZoneVector origin,direction;} AimRay;
+static AimRay (*original_screen_ray)(void *,ZoneVector,void *);
+static uint32_t shoulder_ray_camera;
+static AimRay shoulder_screen_ray(void *camera,ZoneVector point,void *method) {
+ if(shoulder_body && shoulder_ray_camera && api.target(shoulder_ray_camera)==camera) {
+  int (*width)(void)=api.resolve_icall ? (void *)api.resolve_icall("UnityEngine.Screen::get_width()") : NULL;
+  int (*height)(void)=api.resolve_icall ? (void *)api.resolve_icall("UnityEngine.Screen::get_height()") : NULL;
+  if(width && height) {
+   int w=width(),h=height();
+   if(w>0 && h>0 && w<=16384 && h<=16384) {point.x=w*0.5f;point.y=h*0.5f;}
+  }
+ }
+ return original_screen_ray(camera,point,method);
+}
+/* Visual tracer has its own native direction, independent of the damage ray. */
+static void (*original_bullet_tracer)(void *,ZoneVector,ZoneVector,void *);
+static uint32_t shoulder_muzzle;static int shoulder_muzzle_weapon=-1;static uint64_t shoulder_muzzle_retry;
+static void *shoulder_weapon_muzzle(void *player) {
+ void *manager=object_field(player,"weaponManager"),*weapon=object_field(manager,"currentWeapon");
+ int id=-1;const Spec id_spec={"weaponId",8,0};void *field=checked_field(weapon,&id_spec);
+ if(!field)return NULL;
+ api.read(weapon,field,&id);
+ void *cached=shoulder_muzzle ? api.target(shoulder_muzzle) : NULL;
+ if(cached && shoulder_muzzle_weapon==id)return cached;
+ uint64_t now=armGetSystemTick();
+ if(shoulder_muzzle_weapon==id && now<shoulder_muzzle_retry)return NULL;
+ shoulder_muzzle_retry=now+armGetSystemTickFreq();
+ if(shoulder_muzzle) {api.release(shoulder_muzzle);shoulder_muzzle=0;}
+ shoulder_muzzle_weapon=id;
+ void *body=shoulder_body ? api.target(shoulder_body) : NULL;
+ const void *corlib=api.corlib();void *type_class=corlib ? api.class_named(corlib,"System","Type") : NULL;
+ const void *get_type=type_class ? api.method(type_class,"GetType",1) : NULL;
+ if(!body || !get_type)return NULL;
+ void *name=api.new_string("brijesh.CountryWar2.WeaponCommonProperties, Assembly-CSharp"),*exception=NULL;
+ void *type_args[]={name};void *type=name ? api.invoke(get_type,NULL,type_args,&exception) : NULL;
+ if(exception || !type)return NULL;
+ unsigned char yes=1,no=0;void *args[]={type,&yes,&yes,&yes,&no,NULL},*array=NULL;
+ if(squad_invoke(body,"GetComponentsInternal",6,args,&array) || !array)return NULL;
+ uintptr_t count=api.array_length(array);if(count>256)return NULL;
+ for(uintptr_t i=0;i<count;++i) {
+  void *candidate=NULL;memcpy(&candidate,(unsigned char *)array+32+8*i,8);
+  field=checked_field(candidate,&id_spec);if(!field)continue;
+  int candidate_id=-1;api.read(candidate,field,&candidate_id);if(candidate_id!=id)continue;
+  void *muzzle=NULL;
+  if(!squad_invoke(candidate,"get_Muzzle",0,NULL,&muzzle) && muzzle) {
+   shoulder_muzzle=api.weak(muzzle,0);return muzzle;
+  }
+ }
+ return NULL;
+}
+static void shoulder_bullet_tracer(void *object,ZoneVector origin,ZoneVector direction,void *method) {
+ void *animation=shoulder_animation ? api.target(shoulder_animation) : NULL;
+ void *player=object_field(animation,"player");
+ void *shooter=object_field(object,"basicLauncherShooter");
+ if(shoulder_body && player && object_field(shooter,"playerManager")==player) {
+  void *camera=shoulder_ray_camera ? api.target(shoulder_ray_camera) : NULL;
+  void *muzzle=shoulder_weapon_muzzle(player);
+  if(camera && muzzle) {
+   AimRay ray=shoulder_screen_ray(camera,(ZoneVector){0,0,0},NULL);
+   ZoneVector start;
+   if(!zone_vector_property(muzzle,"get_position",&start,0)) {
+    ZoneVector target={ray.origin.x+ray.direction.x*1000,ray.origin.y+ray.direction.y*1000,ray.origin.z+ray.direction.z*1000};
+    const Spec hit_spec={"hit",17,0};void *field=checked_field(object,&hit_spec);
+    unsigned char hit[44]={0};
+    if(field) {
+     api.read(object,field,hit);int collider=0;float distance=0;
+     memcpy(&collider,hit+40,4);memcpy(&distance,hit+28,4);
+     if(collider && isfinite(distance) && distance>0)memcpy(&target,hit,sizeof target);
+    }
+    ZoneVector delta={target.x-start.x,target.y-start.y,target.z-start.z};
+    float length=sqrtf(delta.x*delta.x+delta.y*delta.y+delta.z*delta.z);
+    if(isfinite(length) && length>0.01f) {
+     origin=start;direction=(ZoneVector){delta.x/length,delta.y/length,delta.z/length};
+    }
+   }
+  }
+ }
+ original_bullet_tracer(object,origin,direction,method);
+}
 static void shoulder_align_pose(void) {
  void *body=shoulder_body ? api.target(shoulder_body) : NULL;
  void *lens=shoulder_lens ? api.target(shoulder_lens) : NULL;
@@ -561,8 +669,51 @@ static void shoulder_cadence(void *animation) {
   shoulder_gait_log=now+freq*2;
  }
 }
+/* Native forward input accelerates independently of joystick travel. Limit
+ * the local player's actual movement parameters while walking, then restore
+ * them for sprint/physical-touch/vehicle use. Never tune bot controllers. */
+uintptr_t local_movement_resume;
+extern void local_movement_bridge(void);
+static void local_walk_parameters(void *controller,int final) {
+ static uint32_t owner;static void *fields[14];static float original[4];static int changed,last_mode=-2;
+ if(!view_visibility_owner || api.target(view_visibility_owner)!=controller)return;
+ if(!owner || api.target(owner)!=controller) {
+  if(owner)api.release(owner);
+  owner=api.weak(controller,0);changed=0;last_mode=-2;memset(fields,0,sizeof fields);
+  const Spec specs[]={{"normalspeed",12,0},{"speedIncreaseInputThreshold",12,0},{"speedIncrementFactor",12,0},{"runspeed",12,0},{"speed",12,0},{"autoRun",2,0},{"running",2,0},{"isAiming",2,0},{"crouching",2,0},{"jumping",2,0},{"climbladder",2,0},{"landing",2,0},{"isReloading",2,0},{"isFiring",2,0}};
+  for(unsigned i=0;i<14;++i) {fields[i]=checked_field(controller,&specs[i]);if(!fields[i]) {fields[0]=NULL;return;}}
+  for(unsigned i=0;i<4;++i) {api.read(controller,fields[i],&original[i]);if(!isfinite(original[i]) || original[i]<0 || original[i]>1000) {fields[0]=NULL;return;}}
+ }
+ if(!fields[0] || original[0]<=0 || original[3]<=0)return;
+ int mode=controller_touch_movement_mode();
+ if(mode<0) {
+  if(changed) {
+   for(unsigned i=0;i<3;++i)api.write(controller,fields[i],&original[i]);
+   unsigned char no=0;api.write(controller,fields[5],&no);api.write(controller,fields[6],&no);
+  }
+  changed=0;last_mode=-2;return;
+ }
+ int busy=0;
+ for(unsigned i=7;i<14;++i) {unsigned char value=0;api.read(controller,fields[i],&value);busy|=value!=0;}
+ int goal_milli=movement_goal_milli((int)(original[0]*1000.0f),(int)(original[3]*1000.0f),mode);
+ float values[]={original[0],2.0f,1.0f};
+ for(unsigned i=0;i<3;++i)api.write(controller,fields[i],&values[i]);
+ unsigned char no=0;api.write(controller,fields[5],&no);
+ float speed=0;api.read(controller,fields[4],&speed);
+ if(isfinite(speed) && speed>=0 && speed<10000) {
+  float target=(float)movement_speed_milli((int)(speed*1000.0f),goal_milli,busy,final)/1000.0f;
+  api.write(controller,fields[4],&target);
+ }
+ unsigned char running=(unsigned char)movement_running(mode,busy);api.write(controller,fields[6],&running);
+ if(final && mode!=last_mode && output)fprintf(output,"LOCAL_MOVEMENT mode=%s goal=%.3f final_physics_gate=1 busy=%d auto_run=0\n",mode ? "SPRINT" : "WALK",(float)goal_milli/1000.0f,busy);
+ if(final)last_mode=mode;
+ changed=1;
+}
+void local_movement_prepare(void *controller) {local_walk_parameters(controller,1);}
 static void player_controller_update(void *controller,void *method) {
+ local_walk_parameters(controller,0);
  original_player_update(controller,method);
+ if(view_visibility_owner && api.target(view_visibility_owner)==controller)view_visibility_refresh();
  if(shoulder_controller && api.target(shoulder_controller)==controller) {
   void *animation=shoulder_animation ? api.target(shoulder_animation) : NULL;
   if(animation)shoulder_cadence(animation);
@@ -658,7 +809,14 @@ static void third_animation_late(void *animation,void *method) {
   shoulder_align_pose();shoulder_stabilize_walk(animation);
  }
 }
+static uint32_t shoulder_weapon_handle;
+static int shoulder_weapon_id=-1;
+static uint64_t shoulder_rescan_until;
 static void shoulder_restore_models(void) {
+ if(shoulder_ray_camera) {api.release(shoulder_ray_camera);shoulder_ray_camera=0;}
+ if(shoulder_muzzle) {api.release(shoulder_muzzle);shoulder_muzzle=0;}shoulder_muzzle_weapon=-1;
+ if(shoulder_weapon_handle) {api.release(shoulder_weapon_handle);shoulder_weapon_handle=0;}
+ shoulder_weapon_id=-1;shoulder_rescan_until=0;
  shoulder_clear_pose();
  if(shoulder_controller) {api.release(shoulder_controller);shoulder_controller=0;}
  if(shoulder_ik) {
@@ -695,20 +853,49 @@ static void shoulder_restore_models(void) {
 static int shoulder_show_model(void *view,void *fps) {
  void *first=object_field(view,"fpsCharacter"),*third=object_field(view,"thirdPersonCharacter");
  if(!first || !third || first==third)return 0;
- if(shoulder_body && api.target(shoulder_body)==third)return 1;
- shoulder_restore_models();
+ int refresh=shoulder_body && api.target(shoulder_body)==third;
+ if(!refresh)shoulder_restore_models();
+ void *manager=object_field(object_field(view,"playerManager"),"weaponManager");
+ void *weapon=object_field(manager,"currentWeapon");int weapon_id=-1;
+ int have_id=!squad_int(manager,"currentWeaponId",&weapon_id,0);
+ void *previous_weapon=shoulder_weapon_handle ? api.target(shoulder_weapon_handle) : NULL;
+ uint64_t now=armGetSystemTick();
+ if(!refresh || !have_id || weapon_id!=shoulder_weapon_id || weapon!=previous_weapon) {
+  if(shoulder_weapon_handle)api.release(shoulder_weapon_handle);
+  shoulder_weapon_handle=weapon ? api.weak(weapon,0) : 0;
+  shoulder_weapon_id=weapon_id;shoulder_rescan_until=now+armGetSystemTickFreq();
+ }
+ if(refresh && have_id && now>shoulder_rescan_until) {
+  unsigned char no=0;void *args[]={&no};
+  for(unsigned i=0;i<shoulder_renderer_count;++i) {
+   void *renderer=api.target(shoulder_renderers[i].handle);
+   if(renderer)squad_invoke(renderer,"set_enabled",1,args,NULL);
+  }
+  return 1;
+ }
+ /* Discard destroyed weapon renderers before collecting a replacement. */
+ for(unsigned i=0;i<shoulder_renderer_count;) {
+  if(api.target(shoulder_renderers[i].handle)) {++i;continue;}
+  api.release(shoulder_renderers[i].handle);
+  shoulder_renderers[i]=shoulder_renderers[--shoulder_renderer_count];
+ }
  const void *corlib=api.corlib();void *type_class=corlib ? api.class_named(corlib,"System","Type") : NULL;
  const void *get_type=type_class ? api.method(type_class,"GetType",1) : NULL;
  void *name=api.new_string("UnityEngine.Renderer, UnityEngine.CoreModule"),*renderer_type=NULL,*exception=NULL;
  void *type_args[]={name};
  if(get_type && name)renderer_type=api.invoke(get_type,NULL,type_args,&exception);
  if(exception || !renderer_type)return 0;
- unsigned char yes=1,no=0;void *third_array=NULL;
- void *collect_args[]={renderer_type,&yes,&yes,&yes,&no,NULL};
- if(squad_invoke(third,"GetComponentsInternal",6,collect_args,&third_array) || !third_array)return 0;
- uintptr_t third_count=api.array_length(third_array);if(!third_count || third_count>96)return 0;
- void *third_renderers[96]={0};
- for(uintptr_t i=0;i<third_count;++i)memcpy(&third_renderers[i],(unsigned char *)third_array+32+8*i,8);
+ unsigned char yes=1,no=0;
+ void *third_renderers[256]={0};uintptr_t third_count=0;
+ /* Keep the original reticle renderers; only the FPS body/guns are hidden. */
+ void *exclude_roots[]={third,object_field(fps,"crosshair"),object_field(fps,"crosshairCamera")};
+ for(unsigned root=0;root<3;++root)if(exclude_roots[root]) {
+  void *array=NULL,*collect_args[]={renderer_type,&yes,&yes,&yes,&no,NULL};
+  if(squad_invoke(exclude_roots[root],"GetComponentsInternal",6,collect_args,&array) || !array)goto fail;
+  uintptr_t count=api.array_length(array);if(count+third_count>256)goto fail;
+  for(uintptr_t i=0;i<count;++i)memcpy(&third_renderers[third_count++],(unsigned char *)array+32+8*i,8);
+ }
+ if(!third_count)goto fail;
  void *roots[]={first,object_field(fps,"weaponCamera")};
  for(unsigned root=0;root<2;++root)if(roots[root]) {
   void *args[]={renderer_type,&yes,&yes,&yes,&no,NULL},*array=NULL,*object=roots[root];
@@ -716,7 +903,7 @@ static int shoulder_show_model(void *view,void *fps) {
    object=NULL;if(squad_invoke(roots[root],"get_gameObject",0,NULL,&object) || !object)goto fail;
   }
   if(squad_invoke(object,"GetComponentsInternal",6,args,&array) || !array)goto fail;
-  uintptr_t count=api.array_length(array);if(count>96)goto fail;
+  uintptr_t count=api.array_length(array);if(count>256)goto fail;
   for(uintptr_t i=0;i<count;++i) {
    void *renderer=NULL;memcpy(&renderer,(unsigned char *)array+32+8*i,8);if(!renderer)continue;
    unsigned duplicate=0;
@@ -724,13 +911,14 @@ static int shoulder_show_model(void *view,void *fps) {
    for(unsigned j=0;j<shoulder_renderer_count;++j)
     if(api.target(shoulder_renderers[j].handle)==renderer)duplicate=1;
    if(duplicate)continue;
-   if(shoulder_renderer_count==96)goto fail;
+   if(shoulder_renderer_count==256)goto fail;
    void *boxed=NULL;if(squad_invoke(renderer,"get_enabled",0,NULL,&boxed) || !boxed || !api.unbox(boxed))goto fail;
    uint32_t handle=api.weak(renderer,0);if(!handle)goto fail;
    shoulder_renderers[shoulder_renderer_count].handle=handle;
    shoulder_renderers[shoulder_renderer_count++].enabled=*(unsigned char *)api.unbox(boxed);
   }
  }
+ if(!refresh) {
  void *boxed=NULL;
  if(squad_invoke(third,"get_activeSelf",0,NULL,&boxed) || !boxed || !api.unbox(boxed))goto fail;
  shoulder_body_active=*(unsigned char *)api.unbox(boxed);shoulder_body=api.weak(third,0);
@@ -747,16 +935,58 @@ static int shoulder_show_model(void *view,void *fps) {
  shoulder_ik=api.weak(ik,0);shoulder_animation=api.weak(animation,0);shoulder_lens=api.weak(lens,0);
  shoulder_controller=api.weak(object_field(object_field(animation,"player"),"fpsController"),0);
  if(!shoulder_ik || !shoulder_animation || !shoulder_lens || !shoulder_controller)goto fail;
+ void *ray_camera=object_field(fps,"playerCamera");
+ if(ray_camera)shoulder_ray_camera=api.weak(ray_camera,0);
+ }
  void *enable[]={&yes};if(squad_invoke(third,"SetActive",1,enable,NULL))goto fail;
  for(unsigned i=0;i<shoulder_renderer_count;++i) {
   void *renderer=api.target(shoulder_renderers[i].handle),*disable[]={&no};
   if(renderer && squad_invoke(renderer,"set_enabled",1,disable,NULL))goto fail;
  }
- if(output)fprintf(output,"SHOULDER_MODEL renderers_hidden=%u fps_gameobject=KEPT_ACTIVE\n",shoulder_renderer_count);
+ if(!refresh && output)fprintf(output,"SHOULDER_MODEL renderers_hidden=%u fps_gameobject=KEPT_ACTIVE\n",shoulder_renderer_count);
  return 1;
 fail:
  if(output)fprintf(output,"SHOULDER_MODEL_FAILED safe_restore=1\n");
  shoulder_restore_models();return 0;
+}
+/* Suppress rendering only: disabling the weapon GameObject stops its scripts.
+ * Keep weak references and restore exactly the visibility changed here. */
+typedef struct {uint32_t handle;unsigned char previous,component;} ViewVisibility;
+static ViewVisibility view_visibility[7];
+static void view_visibility_set(unsigned index,void *object,int hide,int component) {
+ ViewVisibility *slot=&view_visibility[index];
+ void *old=slot->handle ? api.target(slot->handle) : NULL;
+ if(slot->handle && (!hide || old!=object)) {
+  void *args[]={&slot->previous};
+  if(old && slot->previous)squad_invoke(old,slot->component ? "set_enabled" : "SetActive",1,args,NULL);
+  api.release(slot->handle);memset(slot,0,sizeof *slot);
+ }
+ if(!hide || !object)return;
+ if(!slot->handle) {
+  void *boxed=NULL;
+  if(squad_invoke(object,component ? "get_enabled" : "get_activeSelf",0,NULL,&boxed) || !boxed || !api.unbox(boxed))return;
+  slot->previous=*(unsigned char *)api.unbox(boxed);slot->component=component;
+  slot->handle=api.weak(object,0);if(!slot->handle)return;
+ }
+ unsigned char no=0;void *args[]={&no};
+ squad_invoke(object,component ? "set_enabled" : "SetActive",1,args,NULL);
+}
+static void view_visibility_refresh(void) {
+ for(unsigned i=0;i<7;++i)if(view_visibility[i].handle) {
+  void *object=api.target(view_visibility[i].handle);
+  unsigned char no=0;void *args[]={&no};
+  if(object)squad_invoke(object,view_visibility[i].component ? "set_enabled" : "SetActive",1,args,NULL);
+ }
+}
+static void driving_visibility(void *player,int driving) {
+ void *fps=object_field(player,"fpsCamera"),*third=object_field(player,"thirdPersonCamera");
+ view_visibility_set(0,object_field(fps,"crosshair"),driving,0);
+ view_visibility_set(1,object_field(fps,"crosshairCamera"),driving,0);
+ view_visibility_set(2,object_field(third,"crosshair"),driving,0);
+ view_visibility_set(3,object_field(third,"crosshairCamera"),driving,0);
+ view_visibility_set(4,object_field(third,"weaponCamera"),driving,1);
+ void *ui=crosshair_ui ? api.target(crosshair_ui) : NULL;
+ view_visibility_set(6,object_field(ui,"muzzleflashImage"),driving || shoulder_body!=0,1);
 }
 static void third_person_test_poll(void) {
  static uint64_t next;static int preferred=1,manual,shifted,original_mask,have_mask;
@@ -769,6 +999,8 @@ static void third_person_test_poll(void) {
               !squad_bool(player,"_isAlive",&alive) && alive;
  void *old_transform=transform_handle ? api.target(transform_handle) : NULL;
  if(!playable) {
+  if(view_visibility_owner) {api.release(view_visibility_owner);view_visibility_owner=0;}
+  for(unsigned i=0;i<7;++i)view_visibility_set(i,NULL,0,0);
   shoulder_restore_models();
   if(shifted && old_transform)zone_vector_property(old_transform,"set_localPosition",&original_position,1);
   if(shifted && have_mask && camera_handle) {
@@ -778,16 +1010,29 @@ static void third_person_test_poll(void) {
   shifted=0;manual=0;preferred=1;__atomic_store_n(&camera_toggle_pending,0,__ATOMIC_RELAXED);return;
  }
  if(__atomic_exchange_n(&camera_toggle_pending,0,__ATOMIC_RELAXED)) {preferred=3-preferred;manual=1;}
- if(!manual)return;
+ int driving=0;
+ if(squad_bool(object_field(player,"carInteractionHandler"),"drivingCar",&driving))return;
+ driving_visibility(player,driving);
  void *controller=object_field(player,"fpsController"),*view=object_field(player,"playerViewManager");
  void *fps=object_field(player,"fpsCamera"),*camera_object=object_field(fps,"playerCamera");
  if(!controller || !view || !camera_object)return;
+ if(!view_visibility_owner || api.target(view_visibility_owner)!=controller) {
+  if(view_visibility_owner)api.release(view_visibility_owner);
+  view_visibility_owner=api.weak(controller,0);
+ }
+ if(driving) {
+  view_visibility_set(5,object_field(fps,"weaponCamera"),1,1);
+  shoulder_restore_models();
+  if(shifted && old_transform)zone_vector_property(old_transform,"set_localPosition",&original_position,1);
+  if(shifted && have_mask) {void *args[]={&original_mask};squad_invoke(camera_object,"set_cullingMask",1,args,NULL);}
+  shifted=0;return;
+ }
+ if(!manual) {view_visibility_set(5,NULL,0,1);return;}
  void *camera=squad_singleton("brijesh.CountryWar2","CameraManager","Instance"),*boxed=NULL;
  if(!camera || squad_invoke(camera,"get_cameraMode",0,NULL,&boxed) || !boxed)return;
- int *mode=api.unbox(boxed);if(!mode || (*mode!=1 && *mode!=2))return;
- int driving=object_field(object_field(player,"carInteractionHandler"),"drivingCar")!=NULL;
- if(driving) {
-  shoulder_restore_models();
+ int *mode=api.unbox(boxed);if(!mode)return;
+ if(*mode!=1 && *mode!=2) {
+  shoulder_restore_models();view_visibility_set(5,NULL,0,1);
   if(shifted && old_transform)zone_vector_property(old_transform,"set_localPosition",&original_position,1);
   if(shifted && have_mask) {void *args[]={&original_mask};squad_invoke(camera_object,"set_cullingMask",1,args,NULL);}
   shifted=0;return;
@@ -808,6 +1053,8 @@ static void third_person_test_poll(void) {
  }
  int aiming=0;squad_bool(controller,"isAiming",&aiming);
  int third=preferred==2 && !aiming && !__atomic_load_n(&camera_aim_held,__ATOMIC_RELAXED);
+ /* Hide weapon meshes, not the camera that also draws the original reticle. */
+ view_visibility_set(5,NULL,0,1);
  if(third) {
   if(!shoulder_show_model(view,fps))return;
   shoulder_align_pose();
@@ -825,7 +1072,8 @@ static void third_person_test_poll(void) {
   if(have_mask) {
    void *tp_camera=object_field(object_field(player,"thirdPersonCamera"),"playerCamera");boxed=NULL;
    if(!squad_invoke(tp_camera,"get_cullingMask",0,NULL,&boxed) && boxed && api.unbox(boxed)) {
-    int mask=0;memcpy(&mask,api.unbox(boxed),4);void *args[]={&mask};
+    int mask=0;memcpy(&mask,api.unbox(boxed),4);
+    void *args[]={&mask};
     squad_invoke(camera_object,"set_cullingMask",1,args,NULL);
    }
   }
@@ -884,7 +1132,24 @@ static void permanent_network_locks(void) {
   if(go)squad_invoke(go,"SetActive",1,enable,NULL);
  }
 }
+static unsigned gyro_gameplay_allowed;
+int ai_profile_gyro_allowed(void) {return (int)__atomic_load_n(&gyro_gameplay_allowed,__ATOMIC_ACQUIRE);}
+static void gyro_gameplay_refresh(void) {
+ void *game=zone_playing_game(),*player=game ? object_field(game,"_localPlayer") : NULL;
+ void *controller=object_field(player,"fpsController");int local=0,alive=0,aiming=0;
+ int allowed=player && controller && !squad_bool(player,"_isLocalPlayer",&local) && local &&
+  !squad_bool(player,"_isAlive",&alive) && alive;
+ int driving=0;
+ if(squad_bool(object_field(player,"carInteractionHandler"),"drivingCar",&driving) || driving)allowed=0;
+ float (*time_scale)(void)=api.resolve_icall ? (float (*)(void))api.resolve_icall("UnityEngine.Time::get_timeScale()") : NULL;
+ if(!time_scale && api.resolve_icall)time_scale=(float (*)(void))api.resolve_icall("UnityEngine.Time::get_timeScale");
+ if(time_scale && time_scale()<=0.001f)allowed=0;
+ __atomic_store_n(&mouse_look_allowed,allowed!=0,__ATOMIC_RELEASE);
+ allowed=allowed && !squad_bool(controller,"isAiming",&aiming) && aiming;
+ __atomic_store_n(&gyro_gameplay_allowed,allowed!=0,__ATOMIC_RELEASE);
+}
 void ai_profile_poll(void) {
+ gyro_gameplay_refresh();
  suppress_startup_promotion();
 #ifdef SWAG_THIRD_PERSON_TEST
  third_person_test_poll();
@@ -926,6 +1191,7 @@ int ai_profile_prepare(AndroidElf *module,FILE *log) {
  API(method,"il2cpp_class_get_method_from_name");API(invoke,"il2cpp_runtime_invoke");
  API(unbox,"il2cpp_object_unbox");API(weak,"il2cpp_gchandle_new_weakref");
  API(target,"il2cpp_gchandle_get_target");API(release,"il2cpp_gchandle_free");
+ API(domain,"il2cpp_domain_get");API(assemblies,"il2cpp_domain_get_assemblies");API(image,"il2cpp_assembly_get_image");
  API(class_named,"il2cpp_class_from_name");API(static_read,"il2cpp_field_static_get_value");
  API(new_string,"il2cpp_string_new");API(strong,"il2cpp_gchandle_new");
  API(string_length,"il2cpp_string_length");API(string_chars,"il2cpp_string_chars");
@@ -938,6 +1204,8 @@ int ai_profile_prepare(AndroidElf *module,FILE *log) {
  #undef API
  if(!api.klass || !api.field || !api.flags || !api.type || !api.kind || !api.read || !api.write || !api.method || !api.invoke || !api.weak || !api.target || !api.release)return -1;
  const struct {size_t offset;uint32_t words[4];} guards[]={
+  {0x11aabcc,{0xd10103ff,0xa901cfff,0xa9037bfd,0x9100c3fd}},
+  {0xc3d38c,{0xf94002c0,0xbd41f66b,0xbd41fa6a,0xbd41fe68}},
   {0xc3c4e4,{0xd10243ff,0x6d0233ed,0x6d032beb,0x6d0423e9}},
   {0x17578bc,{0xd10243ff,0x6d013bef,0x6d0233ed,0x6d032beb}},
   {0x16c9c58,{0xfc1a0fe8,0xa90167fc,0xa9025ff8,0xa90357f6}},
@@ -979,16 +1247,51 @@ int ai_profile_prepare(AndroidElf *module,FILE *log) {
  memcpy((unsigned char *)trampoline_memory.staging+256,module->image+0x17578bc,16);
  jump((unsigned char *)trampoline_memory.staging+272,module->bias+0x17578cc);
 #endif
+ const uint32_t mouse_guard[]={0xa9be4ff4,0xa9017bfd,0x910043fd,0xb000aa74};
+ int mouse_bridge=api.string_chars && api.string_length && module->size>0x15eb144 &&
+  !memcmp(module->image+0x15eb0f4,mouse_guard,16) && !memcmp(module->image+0x15eb134,mouse_guard,16);
+ if(mouse_bridge) {
+  /* The fourth original instruction is ADRP x20. Relocate it explicitly
+   * as a literal load of the guest page; never copy its PC-relative encoding. */
+  const uint32_t load_page=0x580000b4;uintptr_t page=module->bias+0x2b38000;
+  const size_t entries[]={0x15eb0f4,0x15eb134};
+  for(unsigned i=0;i<2;++i) {
+   unsigned char *slot=(unsigned char *)trampoline_memory.staging+384+i*64;
+   memcpy(slot,module->image+entries[i],12);memcpy(slot+12,&load_page,4);
+   jump(slot+16,module->bias+entries[i]+16);memcpy(slot+32,&page,8);
+  }
+ }
+#ifdef SWAG_THIRD_PERSON_TEST
+ const uint32_t tracer_guard[]={0x6dbb33ed,0x6d012beb,0x6d0223e9,0xa9034ff4};
+ if(module->size<=0xc570cc || memcmp(module->image+0xc570bc,tracer_guard,16))return -1;
+ memcpy((unsigned char *)trampoline_memory.staging+576,module->image+0xc570bc,16);
+ jump((unsigned char *)trampoline_memory.staging+592,module->bias+0xc570cc);
+ memcpy((unsigned char *)trampoline_memory.staging+512,module->image+0x11aabcc,16);
+ jump((unsigned char *)trampoline_memory.staging+528,module->bias+0x11aabdc);
+#endif
  AndroidElf trampoline={0};trampoline.image=trampoline_memory.staging;trampoline.size=trampoline_memory.size;
  trampoline.bias=(uintptr_t)trampoline_memory.execution;trampoline.relocated=1;trampoline.phnum=1;
  trampoline.ph[0].p_type=PT_LOAD;trampoline.ph[0].p_flags=PF_R|PF_X;trampoline.ph[0].p_memsz=4096;
  if(nx_memory_publish(&trampoline_memory,&trampoline,log))return -1;
 #ifdef SWAG_THIRD_PERSON_TEST
+ original_bullet_tracer=(void *)((uintptr_t)trampoline_memory.execution+576);
+ jump(module->image+0xc570bc,(uintptr_t)shoulder_bullet_tracer);
+ original_screen_ray=(void *)((uintptr_t)trampoline_memory.execution+512);
+ jump(module->image+0x11aabcc,(uintptr_t)shoulder_screen_ray);
+ local_movement_resume=module->bias+0xc3d39c;
+ jump(module->image+0xc3d38c,(uintptr_t)local_movement_bridge);
  original_player_update=(void *)((uintptr_t)trampoline_memory.execution+320);
  jump(module->image+0xc3c4e4,(uintptr_t)player_controller_update);
  original_third_animation_late=(void *)((uintptr_t)trampoline_memory.execution+256);
  jump(module->image+0x17578bc,(uintptr_t)third_animation_late);
 #endif
+ if(mouse_bridge) {
+  original_mouse_axis=(void *)((uintptr_t)trampoline_memory.execution+384);
+  original_mouse_raw=(void *)((uintptr_t)trampoline_memory.execution+448);
+  jump(module->image+0x15eb0f4,(uintptr_t)game_mouse_axis);
+  jump(module->image+0x15eb134,(uintptr_t)game_mouse_raw);
+ }
+ if(output)fprintf(output,"MOUSE_AXIS_BRIDGE enabled=%d consumer=playerrotate.Update touch_fallback=KEPT\n",mouse_bridge);
  original_gun_changed=(void *)trampoline_memory.execution;
  zone_move_original=(void *)((uintptr_t)trampoline_memory.execution+64);
  zone_sprint=(void *)(module->bias+0x16a9330);

@@ -8,3 +8,5 @@ int controller_touch_cursor(int *x,int *y);
 int controller_touch_selftest(FILE *log);
 
 void controller_touch_set_vehicle_state(int state,FILE *log);
+
+int controller_touch_movement_mode(void);

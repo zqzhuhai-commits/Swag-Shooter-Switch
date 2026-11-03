@@ -2,6 +2,7 @@
 #include "offline_game.h"
 #include "ai_profile.h"
 #include "diagnostics.h"
+#include "game_performance.h"
 #include <switch.h>
 #include <malloc.h>
 #include <stdio.h>
@@ -127,6 +128,7 @@ int main(int argc, char **argv) {
     batch_set_fast_start(fast_start);
     fprintf(log,"STARTUP_MODE fast=%d full_test_flag=/switch/swag-full-tests.flag\n",fast_start);
     crash_trace_init(log);
+    game_performance_init(log);
     if(R_FAILED(runtime_process_initialize(log))) { printf("Startup failed: process handle unavailable.\n"); consoleUpdate(NULL); svcSleepThread(5000000000ULL); svcExitProcess(); }
     Thread batch_watcher;
     int watcher_running = 0;
@@ -136,7 +138,7 @@ int main(int argc, char **argv) {
         if (R_SUCCEEDED(watcher_rc)) watcher_running = 1;
         else threadClose(&batch_watcher);
     }
-    fprintf(log, "SWAG-NX v0.14.72 lazy-memory; applet=%u own-process=%x\n",
+    fprintf(log, "SWAG-NX v0.14.90 lazy-memory; applet=%u own-process=%x\n",
             (unsigned)appletGetAppletType(), runtime_process_handle());
     runtime_services_init(log); guest_memory_set_log(log); startup_log(log); android_graphics_set_log(log);
     guest_system_set_log(log); unity_host_set_log(log);

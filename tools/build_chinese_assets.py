@@ -162,5 +162,5 @@ promotion_go_raw[-1]=0;changes[998]=bytes(promotion_go_raw)
 (root/'font-assets/level1').write_bytes(rebuild(b,objs,head,changes))
 _,newobjs,_=asset(root/'font-assets/level1');assert len(newobjs)==len(objs)
 report={'terms_revised':revised,'fixed_scene_labels':labels,'remaining_scene_english':sorted(unknown),'device_validation':'pending'}
-(root.parents[1]/'audit/chinese-0.14.72.json').write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding='utf-8')
+(root.parents[1]/'audit/chinese-0.14.90.json').write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding='utf-8')
 print('PASS',len(revised),'translation corrections;',len(labels),'fixed scene labels; remaining English:',len(unknown))

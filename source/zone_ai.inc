@@ -5,7 +5,7 @@ static void (*zone_move_original)(void *,void *);
 static void (*zone_sprint)(void *,void *);
 static unsigned char (*zone_sample)(const ZoneVector *,void *,float,int);
 static unsigned zone_route_reports;
-typedef struct {uint32_t player;unsigned seen,outside,zero_wait,death_requested,was_alive;float health;Bot route;} ZoneActor;
+typedef struct {uint32_t player;unsigned seen,outside,zero_wait,death_requested,was_alive;float health;Bot route;uint64_t recovery_tick,recovery_hit,recovery_cooldown;ZoneVector recovery_position;float recovery_health;unsigned recovery_samples,recovery_still;} ZoneActor;
 static ZoneActor zone_actors[128];
 static unsigned zone_scan;
 static unsigned zone_submitted;
@@ -135,9 +135,67 @@ static int zone_ai_submit(void *base,void *method) {
 static void zone_ai_move(void *base,void *method) {
  if(!zone_ai_submit(base,method))zone_move_original(base,method);
 }
+/* React only to observed health loss followed by sustained immobility.
+ * No teleport, state-flag clearing, or attack-target replacement. */
+static void zone_recover_attacked(void *base) {
+ if(!zone_playing_game())return;
+ void *player=object_field(base,"playerManager");int alive=0;
+ if(!player || squad_bool(player,"_isAlive",&alive) || !alive)return;
+ ZoneActor *w=NULL;
+ for(unsigned i=0;i<128;++i)if(zone_actors[i].player && api.target(zone_actors[i].player)==player) {w=&zone_actors[i];break;}
+ if(!w)return;
+ uint64_t now=armGetSystemTick(),freq=armGetSystemTickFreq();
+ if(now<w->recovery_tick)return;
+ w->recovery_tick=now+freq/2;
+ void *health=object_field(player,"playerHealth");const Spec hp={"_health",12,0};
+ void *field=checked_field(health,&hp);float value=0;
+ if(!field)return;
+ api.read(health,field,&value);
+ ZoneVector position;void *transform=object_field(base,"myTransform");
+ if(!isfinite(value) || value<=0 || !transform || zone_vector_property(transform,"get_position",&position,0) || !zone_finite(position)) {
+  w->recovery_samples=0;w->recovery_still=0;w->recovery_hit=0;return;
+ }
+ if(w->recovery_samples && value<w->recovery_health-0.01f) {
+  if(!w->recovery_hit || now-w->recovery_hit>freq*8) {
+   w->recovery_still=0;w->recovery_position=position;
+  }
+  w->recovery_hit=now;
+ }
+ if(!w->recovery_samples || zone_distance_squared(position,w->recovery_position)>0.25f) {
+  w->recovery_position=position;w->recovery_still=0;
+ } else if(w->recovery_still<8)++w->recovery_still;
+ w->recovery_health=value;w->recovery_samples=1;
+ if(!w->recovery_hit || now-w->recovery_hit>freq*8 || w->recovery_still<6 || now<w->recovery_cooldown)return;
+ int busy=0;
+ if(squad_bool(base,"usingDynamicObject",&busy) || busy ||
+    squad_bool(base,"inParkour",&busy) || busy || squad_bool(base,"isDodging",&busy) || busy)return;
+ if(!zone_navigation_ready(base))return;
+ w->recovery_cooldown=now+freq*5;
+ if(!zone_sample && api.resolve_icall)zone_sample=(void *)api.resolve_icall("UnityEngine.AI.NavMesh::SamplePosition_Injected(UnityEngine.Vector3&,UnityEngine.AI.NavMeshHit&,System.Single,System.Int32)");
+ if(!zone_sample)return;
+ void *nav=object_field(base,"navI"),*agent=object_field(nav,"agent");
+ for(unsigned i=0;i<4;++i) {
+  ZoneVector wanted=position;wanted.x+=(i==0 ? 3 : i==1 ? -3 : 0);wanted.z+=(i==2 ? 3 : i==3 ? -3 : 0);
+  _Alignas(16) unsigned char hit[64]={0};
+  if(!zone_sample(&wanted,hit,1.5f,-1))continue;
+  ZoneVector point;memcpy(&point,hit,sizeof point);
+  if(!zone_finite(point) || zone_distance_squared(position,point)<1.0f)continue;
+  if(zone_ai.valid && zone_distance_squared(position,zone_ai.current_center)<=zone_ai.current_radius*zone_ai.current_radius &&
+     zone_distance_squared(point,zone_ai.current_center)>zone_ai.current_radius*zone_ai.current_radius)continue;
+  unsigned char stopped=0;void *resume[]={&stopped};
+  if(squad_invoke(agent,"set_isStopped",1,resume,NULL))continue;
+  void *args[]={&point},*accepted=NULL;
+  if(squad_invoke(nav,"SetDestination",1,args,&accepted) || !accepted)continue;
+  unsigned char *ok=api.unbox(accepted);if(!ok || !*ok)continue;
+  w->recovery_still=0;w->recovery_hit=0;
+  if(output)fprintf(output,"AI_HIT_RECOVERY health=%.1f destination=%.1f,%.1f,%.1f\n",value,point.x,point.y,point.z);
+  break;
+ }
+}
 static void zone_ai_late(void *base,void *method) {
  zone_late_original(base,method);
  zone_observe_ai(base);
+ zone_recover_attacked(base);
  /* Submit after the combat/cover update, which may have overwritten the path. */
  if(zone_ai.valid)zone_ai_submit(base,NULL);
 }

@@ -7,6 +7,8 @@ if ($LASTEXITCODE) { throw 'Chinese asset build failed.' }
 if ($LASTEXITCODE) { throw 'AI settings asset build failed.' }
 & python (Join-Path $projectDir 'tools/build_gameplay_assets.py')
 if ($LASTEXITCODE) { throw 'Gameplay scene asset build failed.' }
+& python (Join-Path $projectDir 'tools/restore_native_crosshair.py')
+if ($LASTEXITCODE) { throw 'Native crosshair restoration failed.' }
 $compiler = Join-Path $DevkitPro 'devkitA64\bin\aarch64-none-elf-gcc.exe'
 $make = Join-Path $DevkitPro 'msys2\usr\bin\make.exe'
 if (!(Test-Path -LiteralPath $compiler) -or !(Test-Path -LiteralPath $make)) {

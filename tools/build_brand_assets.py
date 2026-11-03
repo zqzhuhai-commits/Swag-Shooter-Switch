@@ -29,5 +29,5 @@ for name,file in entries:
  if fmt==4:
   assert again.image.getchannel('A').getextrema()==(0,255)
  report.append({'file':file,'name':name,'size':size,'format':fmt,'original_preserved':True})
-(root/'audit/brand-images-0.14.72.json').write_text(json.dumps(report,indent=2))
+(root/'audit/brand-images-0.14.90.json').write_text(json.dumps(report,indent=2))
 print('PASS six textures round-trip; original dimensions; transparent menu logo')

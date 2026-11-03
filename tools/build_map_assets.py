@@ -22,5 +22,5 @@ for o in ao:
  if o['pid']==189:continue
  q=lookup[o['pid']];assert a[o['offset']:o['offset']+o['size']]==b[q['offset']:q['offset']+q['size']],o['pid']
 report={'status':'PASS','file':source.name,'texture':189,'dimensions':[1024,1024],'format':34,'all_other_serialized_objects_unchanged':True,'sha256':hashlib.sha256(output.read_bytes()).hexdigest(),'artwork_method':'built-in image_gen text localization','map_overlay_alignment_device_validation':'PENDING'}
-(root/'audit/map-localization-0.14.72.json').write_text(json.dumps(report,indent=2))
+(root/'audit/map-localization-0.14.90.json').write_text(json.dumps(report,indent=2))
 print('PASS map texture encoded; all other sharedassets2 objects byte-identical')

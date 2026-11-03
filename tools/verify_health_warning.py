@@ -35,6 +35,6 @@ for marker in ['playing!=1','value<=0','max<=0','_isAlive','_isLocalPlayer','_he
 report={'status':'PASS','gradient_expression_model_samples':1001,'center_alpha':0,
         'max_alpha':.45,'gradient_start_normalized':start,'pulse_hz_below_50_percent':1,'pulse_hz_below_30_percent':2,'pulse_brightness_range':[.6,1],
         'no_step_at_gradient_start':True,'actual_gl_shader_and_device_visual':'PENDING',
-        'health_threshold_and_fade_compiled_test':'see squad-rules-0.14.72.json'}
-(r/'audit/health-warning-0.14.72.json').write_text(json.dumps(report,indent=2))
+        'health_threshold_and_fade_compiled_test':'see squad-rules-0.14.90.json'}
+(r/'audit/health-warning-0.14.90.json').write_text(json.dumps(report,indent=2))
 print(report)

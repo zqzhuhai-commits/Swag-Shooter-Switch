@@ -80,7 +80,7 @@ def main():
         if error.code != 404:
             raise
         release = request('/releases', 'POST', {'tag_name': TAG, 'target_commitish': SOURCE,
-            'name': '缁濆湴绮捐嫳 0.14.51 / Xiao Fan', 'body': Path('RELEASE-0.14.51.md').read_text(encoding='utf-8'),
+            'name': '绝地精英 0.14.51 / Xiao Fan', 'body': Path('RELEASE-0.14.51.md').read_text(encoding='utf-8'),
             'draft': True, 'prerelease': False})
     existing = {a['name']: a for a in release['assets']}
     if not release['draft']:

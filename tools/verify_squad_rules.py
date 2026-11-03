@@ -185,12 +185,18 @@ while pc!=stop:
         d,a,b=[v.strip() for v in arg.split(',')];write(d,read(a)//read(b) if read(b) else 0)
     elif op in ('mul','umull'):
         d,a,b=[v.strip() for v in arg.split(',')];write(d,read(a)*read(b))
+    elif op=='smulh':
+        d,a,b=[v.strip() for v in arg.split(',')];signed=lambda v:v-(1<<64) if v&(1<<63) else v;write(d,(signed(read(a))*signed(read(b)))>>64)
+    elif op=='asr':
+        d,a,b=[v.strip() for v in arg.split(',')];bits=32 if a.startswith('w') else 64;v=read(a);v=v-(1<<bits) if v&(1<<(bits-1)) else v;write(d,v>>read(b))
+    elif op=='umulh':
+        d,a,b=[v.strip() for v in arg.split(',')];write(d,(read(a)*read(b))>>64)
     elif op=='msub':
         d,a,b,c=[v.strip() for v in arg.split(',')];write(d,read(c)-read(a)*read(b))
     elif op=='orr':
         d,a,b=[v.strip() for v in arg.split(',')];write(d,read(a)|read(b))
     elif op=='movk':
-        d,a,shift=arg.split(', ');bits=int(shift.split('#')[1]);write(d,(read(d)&~(65535<<bits))|(read(a)<<bits))
+        parts=arg.split(', ');d,a=parts[:2];bits=int(parts[2].split('#')[1]) if len(parts)>2 else 0;write(d,(read(d)&~(65535<<bits))|(read(a)<<bits))
     elif op=='sxtw':
         d,a=arg.split(', ');v=read(a)&0xffffffff;write(d,v-(1<<32) if v&(1<<31) else v)
     elif op=='mov':d,a=arg.split(', ');write(d,read(a))
@@ -199,11 +205,15 @@ while pc!=stop:
     elif op in ('cmp','cmn'):
         a,b=arg.split(', ');compare(read(a),read(b),32 if a.startswith('w') else 64,op=='cmn')
     elif op=='cset':d,c=arg.split(', ');write(d,int(condition(c)))
+    elif op=='neg':
+        d,a=arg.split(', ');write(d,-read(a))
+    elif op=='cneg':
+        d,a,c=arg.split(', ');write(d,-read(a) if condition(c) else read(a))
     elif op=='csel':
         d,a,b,c=arg.split(', ');write(d,read(a) if condition(c) else read(b))
-    elif op in ('ldr','str','ldrb','strb','ldrsw'):
+    elif op in ('ldr','str','ldrb','strb','ldrh','strh','ldrsw','ldur','stur'):
         register,operand=arg.split(', ',1);at,base,post=address(operand)
-        size=1 if op.endswith('b') else 4 if op=='ldrsw' or register.startswith('w') else 8
+        size=1 if op.endswith('b') else 2 if op.endswith('h') else 4 if op=='ldrsw' or register.startswith('w') else 8
         if op.startswith('ld'):
             value=load(at,size)
             if op=='ldrsw' and value&(1<<31):value-=1<<32
@@ -241,5 +251,5 @@ report={'status':'PASS','compiled_arm64_fixture':True,'instructions_executed':st
     'production actor collector: roster priority, deduplication, expired handles, capacities 1..52',
     'no dictionary indexer invocation in zone code'],
     'unity_integration':'DEVICE_TEST_PENDING'}
-(root/'audit/squad-rules-0.14.72.json').write_text(json.dumps(report,indent=2))
+(root/'audit/squad-rules-0.14.90.json').write_text(json.dumps(report,indent=2))
 print(json.dumps(report))

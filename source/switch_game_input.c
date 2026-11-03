@@ -3,7 +3,9 @@
 #include "switch_game_input.h"
 #include "jni_shim.h"
 #include "controller_touch.h"
+#include "gyro_aim.h"
 #include "vehicle_state.h"
+#include "game_performance.h"
 extern void *jni_switch_touch_event(int,float,float,long);
 extern void *jni_switch_key_event(int,int,long);
 extern void jni_switch_release_event(void *);
@@ -66,6 +68,7 @@ int switch_game_input_init(FILE *log) {
     padInitializeDefault(&pad);
     if(controller_touch_selftest(log)) return -1;
     controller_touch_init(log);
+    gyro_aim_init(log);
     if(vehicle_state_selftest(log)) return -1;
     fprintf(log,"GAME_INPUT_READY touchscreen=multi_pointer immutable_events=1 menu_navigation=1 game_injection=ENABLED combat_mapping=NOT_VALIDATED\n");
     return 0;
@@ -92,6 +95,7 @@ void switch_game_input_poll(void *env,void *player) {
             int n=desired.count++; desired.ids[n]=pointer_ids[i]; desired.x[n]=pointer_x[i]; desired.y[n]=pointer_y[i];
         }
     }
+    game_performance_poll();
     padUpdate(&pad);
     vehicle_state_poll(output);
     controller_touch_update(&desired,&pad,output);

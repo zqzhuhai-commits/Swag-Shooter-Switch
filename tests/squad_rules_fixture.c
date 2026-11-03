@@ -2,10 +2,43 @@
 #include "guest_cpu_policy.h"
 #include "health_warning_policy.h"
 #include "gait_policy.h"
+#include "gyro_policy.h"
+#include "performance_policy.h"
+#include "mouse_axis_policy.h"
+#include "movement_policy.h"
 #include "zone_safety_policy.h"
 void *memset(void *p,int v,size_t n) {unsigned char *d=p;for(size_t i=0;i<n;++i)d[i]=(unsigned char)v;return p;}
 void *memcpy(void *p,const void *q,size_t n) {unsigned char *d=p;const unsigned char *s=q;for(size_t i=0;i<n;++i)d[i]=s[i];return p;}
 int run_squad_rules_tests(void) {
+ const uint16_t mouse_x[]={'M','o','u','s','e',' ','X'},mouse_y[]={'M','o','u','s','e',' ','Y'},other[]={'M','o','u','s','e',' ','Z'};
+ if(mouse_axis_id(mouse_x,7)!=1 || mouse_axis_id(mouse_y,7)!=2 || mouse_axis_id(other,7))return 107;
+ if(mouse_axis_id(mouse_x,6) || mouse_axis_id(0,7))return 108;
+ if(!mouse_axis_fresh(1000,1100,1000) || !mouse_axis_fresh(1000,1200,1000))return 109;
+ if(mouse_axis_fresh(1000,1201,1000) || mouse_axis_fresh(1000,999,1000) || mouse_axis_fresh(0,100,1000))return 110;
+ if(movement_goal_milli(10000,16000,0)!=10000 || movement_goal_milli(10000,16000,1)!=16000)return 111;
+ if(movement_speed_milli(16000,10000,0,1)!=10000)return 112;
+ if(movement_speed_milli(0,10000,0,1)!=10000 || movement_speed_milli(10000,16000,0,1)!=16000)return 113;
+ if(movement_speed_milli(3000,10000,1,1)!=3000 || movement_speed_milli(16000,10000,1,1)!=10000)return 114;
+ if(movement_speed_milli(0,10000,0,0)!=0 || movement_running(0,0) || movement_running(1,1) || !movement_running(1,0))return 115;
+ uint32_t rates[]={1020000000u,1785000000u,2040000000u,1224000000u};
+ if(performance_select_rate(rates,4,1,1785000000u)!=1785000000u)return 100;
+ if(performance_select_rate(rates,4,1,1100000000u)!=1020000000u)return 101;
+ if(performance_select_rate(rates,4,0,1785000000u) || performance_select_rate(rates,65,1,1785000000u))return 102;
+ if(performance_select_rate(rates,4,1,800000000u) || performance_select_rate(0,4,1,1785000000u))return 103;
+ if(performance_gpu_ceiling(0)!=460800000u || performance_gpu_ceiling(1)!=768000000u || performance_gpu_ceiling(2)!=921600000u)return 104;
+ GyroPolicy gp={0};int32_t gx=0,gy=0;
+ if(gyro_policy_step(&gp,1,1,100,100000,0,1000,1000,&gx,&gy) || gx || gy)return 90;
+ if(!gyro_policy_step(&gp,1,2,116,100000,0,1000,1000,&gx,&gy) || gx<=0 || gy)return 91;
+ if(gyro_policy_step(&gp,1,2,132,100000,0,1000,1000,&gx,&gy) || gx || gy)return 92;
+ if(gyro_policy_step(&gp,0,3,148,100000,0,1000,1000,&gx,&gy) || gp.primed || gx || gy)return 93;
+ gyro_policy_step(&gp,1,4,164,-100000,100000,1000,1000,&gx,&gy);
+ if(!gyro_policy_step(&gp,1,5,180,-100000,100000,1000,1000,&gx,&gy) || gx>=0 || gy<=0)return 94;
+ if(gyro_policy_step(&gp,1,6,400,8000001,0,1000,1000,&gx,&gy) || gp.primed)return 95;
+ if(gyro_policy_pixels(100000,1000,16)!=5400 || gyro_policy_pixels(-100000,1000,16)!=-5400)return 98;
+ if(gyro_policy_pixels(8000000,5000,50)!=45000 || gyro_policy_pixels(1000,1000,16))return 96;
+ gyro_policy_step(&gp,1,7,500,100000,0,1000,1000,&gx,&gy);
+ if(gyro_policy_step(&gp,1,8,800,100000,0,1000,1000,&gx,&gy) || gx || gy)return 97;
+
  if(gait_target_millihz(0)!=450 || gait_target_millihz(1)!=650)return 80;
  if(gait_adjust_rate(600,6000,750)>=600 || gait_adjust_rate(600,600,750)<=600)return 81;
  if(gait_adjust_rate(300,450,450)!=300 || gait_adjust_rate(400,650,650)!=400)return 82;

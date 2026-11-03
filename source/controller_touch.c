@@ -1,5 +1,6 @@
 #include "controller_touch.h"
 #include "ai_profile.h"
+#include "gyro_aim.h"
 #include <string.h>
 #include <stdlib.h>
 #include <math.h>
@@ -14,11 +15,12 @@ static const Target defaults[TARGET_COUNT]={
  {"menu",23,21},{"drive_forward",210,382},{"drive_reverse",212,561},
  {"drive_left",866,499},{"drive_right",1066,494},{"drive_exit",1158,305},{"pickup",880,236}};
 static Target targets[TARGET_COUNT];
-static float move_x=185,move_y=560,look_x=850,look_y=330;
+static float move_x=185,move_y=560,look_x=1080,look_y=410;
 static u64 previous,crouch_begin,reload_begin,interact_begin;
 static int interact_long;
 static int crouch_long,reload_long,alternate_weapon,vehicle,chord,grenade_cancel;
 static int look_active,look_reset,move_active;
+static float gyro_dx,gyro_dy;static int gyro_clutch;
 static int vehicle_auto;
 static int action_id[TARGET_COUNT];
 static unsigned action_seen[TARGET_COUNT];
@@ -31,11 +33,12 @@ static void append(SwitchTouchSnapshot *s,int id,float x,float y) {
  int i=s->count++; s->ids[i]=id; s->x[i]=clamp(x,0,1279); s->y[i]=clamp(y,0,719);
 }
 static void reset(void) {
+ gyro_dx=gyro_dy=0;gyro_clutch=0;gyro_aim_reset();ai_profile_mouse_look(0,0,0);
  camera_begin=0;camera_long=0;ai_profile_camera_aim(0);
  previous=0; crouch_begin=reload_begin=interact_begin=0; interact_long=0; crouch_long=reload_long=0;
  alternate_weapon=vehicle=chord=grenade_cancel=look_active=look_reset=move_active=0;
  vehicle_auto=0;
- look_x=850; look_y=330; move_x=185; move_y=560;
+ look_x=1080; look_y=410; move_x=185; move_y=560;
  memcpy(targets,defaults,sizeof targets);
  for(unsigned i=0;i<TARGET_COUNT;++i) action_id[i]=-1;
  memset(action_seen,0,sizeof action_seen);
@@ -66,6 +69,7 @@ void controller_touch_set_vehicle_state(int state,FILE *log) {
   fprintf(log,"CONTROL_MODE vehicle=%d source=verified_game_field\n",vehicle);
  }
 }
+int controller_touch_movement_mode(void) {return vehicle || !move_active ? -1 : sprint_enabled ? 1 : 0;}
 int controller_touch_cursor(int *x,int *y) { (void)x; (void)y; return 0; }
 static void emit(SwitchTouchSnapshot *s,unsigned action,FILE *log,u64 pressed) {
  if(action_id[action]<0) {
@@ -80,6 +84,7 @@ static void emit(SwitchTouchSnapshot *s,unsigned action,FILE *log,u64 pressed) {
  if(pressed) fprintf(log,"GAME_CONTROL mode=%s action=%s x=%.1f y=%.1f\n",vehicle ? "vehicle" : "foot",targets[action].name,targets[action].x,targets[action].y);
 }
 static void update_at(SwitchTouchSnapshot *s,PadState *pad,FILE *log,u64 now) {
+ ai_profile_mouse_look(0,0,0);
  u64 held=padGetButtons(pad),pressed=held&~previous,released=previous&~held;
  memset(action_seen,0,sizeof action_seen);
  if(pressed&HidNpadButton_L) modifier_used=0;
@@ -113,7 +118,7 @@ static void update_at(SwitchTouchSnapshot *s,PadState *pad,FILE *log,u64 now) {
   if(steer_right && !steer_left) emit(s,RIGHT,log,0);
   if(pressed&HidNpadButton_A) emit(s,EXIT,log,1);
  } else {
-  if(lx || ly) { append(s,16,move_x+(move_active ? lx*(sprint_enabled ? 75 : 40) : 0),move_y-(move_active ? ly*(sprint_enabled ? 75 : 40) : 0)); move_active=1; } else move_active=0;
+  if(lx || ly) { append(s,16,move_x+(move_active ? lx*(sprint_enabled ? 75 : 28) : 0),move_y-(move_active ? ly*(sprint_enabled ? 75 : 28) : 0)); move_active=1; } else move_active=0;
   if(held&HidNpadButton_ZR) emit(s,FIRE,log,pressed&HidNpadButton_ZR);
   /* Translate held trigger into paired clicks on the mobile toggle.
    * Always leave a touch-up frame between opening and closing clicks. */
@@ -143,21 +148,28 @@ static void update_at(SwitchTouchSnapshot *s,PadState *pad,FILE *log,u64 now) {
    camera_long=1;if(!(held&HidNpadButton_ZL))ai_profile_toggle_camera();
   }
   if((released&HidNpadButton_StickL) && !camera_long) {
-   sprint_enabled=!sprint_enabled;emit(s,SPRINT,log,1);
+   sprint_enabled=!sprint_enabled;fprintf(log,"CONTROL_SPRINT enabled=%d source=L3_native_policy\n",sprint_enabled);
   }
 #else
   if(pressed&HidNpadButton_StickL) {
-   sprint_enabled=!sprint_enabled; emit(s,SPRINT,log,1);
+   sprint_enabled=!sprint_enabled;
    fprintf(log,"CONTROL_SPRINT enabled=%d\n",sprint_enabled);
   }
 #endif
  }
- if(!vehicle && (rx || ry)) {
+ if(!vehicle && (rx || ry || gyro_clutch)) {
+  /* Keep the proven touch path alive, but supply Mouse X/Y through its
+   * recenter frames as well so the actual camera consumer stays continuous. */
+  ai_profile_mouse_look(rx*14+gyro_dx,ry*14-gyro_dy,1);
   if(look_reset) { look_reset=0; look_active=0; }
   else {
-   if(!look_active) { look_x=850; look_y=330; look_active=1; }
-   look_x+=rx*14; look_y-=ry*14;
-   if(look_x<650 || look_x>1050 || look_y<160 || look_y>500) look_reset=1;
+   if(!look_active) { look_x=1080; look_y=410; look_active=1; }
+   look_x+=rx*14+gyro_dx; look_y+=-ry*14+gyro_dy;
+   /* The game routes the left half to movement. Keep pointer 17 in
+    * the right camera pad, beyond the loot panel's right edge (x=976)
+    * and above the on-screen fire/jump controls, including its last move. */
+   if(look_x<980 || look_x>1180 || look_y<350 || look_y>470) look_reset=1;
+   look_x=clamp(look_x,980,1180);look_y=clamp(look_y,350,470);
    append(s,17,look_x,look_y);
   }
  } else look_active=0;
@@ -169,7 +181,14 @@ static void update_at(SwitchTouchSnapshot *s,PadState *pad,FILE *log,u64 now) {
  for(unsigned i=0;i<TARGET_COUNT;++i) if(!action_seen[i]) action_id[i]=-1;
  previous=held;
 }
-void controller_touch_update(SwitchTouchSnapshot *s,PadState *pad,FILE *log) { update_at(s,pad,log,armTicksToNs(armGetSystemTick())/1000000); }
+void controller_touch_update(SwitchTouchSnapshot *s,PadState *pad,FILE *log) {
+ u64 held=padGetButtons(pad);
+ int chorded=(held&(HidNpadButton_L|HidNpadButton_R))==(HidNpadButton_L|HidNpadButton_R);
+ int enabled=!vehicle && !chorded && (held&HidNpadButton_ZL) && ai_profile_gyro_allowed();
+ gyro_clutch=gyro_aim_update(pad,enabled,&gyro_dx,&gyro_dy);
+ update_at(s,pad,log,armTicksToNs(armGetSystemTick())/1000000);
+ gyro_dx=gyro_dy=0;
+}
 static int has(const SwitchTouchSnapshot *s,int action) {
  for(int i=0;i<s->count;++i) if(s->ids[i]==action_id[action] && s->x[i]==targets[action].x && s->y[i]==targets[action].y) return 1;
  return 0;
@@ -251,6 +270,19 @@ int controller_touch_selftest(FILE *log) {
  STEP(0,5500); errors+=s.count!=0;
  pad.sticks[0].x=22000; pad.sticks[1].y=22000;
  STEP(0,5600); errors+=s.count!=0; /* unused driving axes must not steer/look */
+ /* Loot interaction must keep the existing look pointer alive and outside
+  * the loot panel, even at the edge of its recenter interval. */
+ reset();pad=(PadState){0};pad.sticks[1].x=22000;
+ STEP(HidNpadButton_Y,6000);STEP(0,6100);
+ errors+=!has(&s,PICKUP);
+ int look_seen=0;
+ for(int i=0;i<s.count;++i)if(s.ids[i]==17) {look_seen=1;errors+=s.x[i]<980 || s.x[i]>1180 || s.y[i]<350 || s.y[i]>470;}
+ errors+=!look_seen;
+ for(int i=0;i<s.count;++i)errors+=s.ids[i]==16; /* Right stick alone must not emit movement. */
+ for(unsigned frame=0;frame<60;++frame) {
+  STEP(0,6200+frame*16);
+  for(int i=0;i<s.count;++i)if(s.ids[i]==17)errors+=s.x[i]>1180 || s.x[i]<980 || s.y[i]<350 || s.y[i]>470;
+ }
  #undef STEP
  fprintf(log,"CONTROLLER_TOUCH_TEST revision=3 errors=%d held_scope=CHECKED sprint_toggle=CHECKED pickup=CHECKED pointer_id_range=CHECKED continuous_fire=CHECKED tap_hold=CHECKED vehicle_controls=CHECKED chord_isolation=CHECKED simultaneous_inputs=CHECKED actual_ui_response=PENDING\n",errors);
  reset(); return errors ? -1 : 0;
