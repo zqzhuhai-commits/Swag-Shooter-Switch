@@ -1,0 +1,21 @@
+name: Publish verified 0.14.90
+on:
+  push:
+    branches: [main]
+    paths: [.github/releases/v0.14.90.json]
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: verified-release-0.14.90
+  cancel-in-progress: false
+jobs:
+  publish:
+    if: github.repository == 'zqzhuhai-commits/Swag-Shooter-Switch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify exact delivered package and publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 tools/publish_verified_01490.py .github/releases/v0.14.90.json
